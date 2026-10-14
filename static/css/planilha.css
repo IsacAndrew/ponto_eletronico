@@ -172,4 +172,18 @@
     .botao-baixar-planilha {
         width: 100%;
     }
+
+    .filtros-planilha:has(#periodo option[value="dia"]:checked) .campo-mes,
+    .filtros-planilha:has(#periodo option[value="dia"]:checked) .campo-data-inicio,
+    .filtros-planilha:has(#periodo option[value="dia"]:checked) .campo-data-fim,
+    .filtros-planilha:has(#periodo option[value="semana"]:checked) .campo-mes,
+    .filtros-planilha:has(#periodo option[value="semana"]:checked) .campo-data-inicio,
+    .filtros-planilha:has(#periodo option[value="semana"]:checked) .campo-data-fim,
+    .filtros-planilha:has(#periodo option[value="mes"]:checked) .campo-data-referencia,
+    .filtros-planilha:has(#periodo option[value="mes"]:checked) .campo-data-inicio,
+    .filtros-planilha:has(#periodo option[value="mes"]:checked) .campo-data-fim,
+    .filtros-planilha:has(#periodo option[value="intervalo"]:checked) .campo-data-referencia,
+    .filtros-planilha:has(#periodo option[value="intervalo"]:checked) .campo-mes {
+        display: none;
+    }
 }

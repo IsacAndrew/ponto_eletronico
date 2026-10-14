@@ -12,6 +12,25 @@ body {
     min-width: 320px;
     min-height: 100vh;
     margin: 0;
+    overflow-x: hidden;
+}
+
+.botao-abrir-menu-mobile,
+.botao-fechar-menu-mobile,
+.fundo-menu-mobile,
+.barra-superior-mobile {
+    display: none;
+}
+
+.controle-menu-mobile {
+    position: fixed;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    clip-path: inset(50%);
 }
 
 .estrutura-sistema {
@@ -33,6 +52,13 @@ body {
         linear-gradient(160deg, #111827 0%, #1e293b 52%, #31425e 100%);
     color: #fff;
     box-shadow: 8px 0 28px rgb(15 23 42 / 12%);
+}
+
+.cabecalho-menu-lateral {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
 }
 
 .marca-sistema {
@@ -360,6 +386,10 @@ body {
         linear-gradient(138deg, #e6edeb 0%, #d7e3de 48%, #c8d9d1 100%);
 }
 
+.area-conteudo {
+    display: contents;
+}
+
 .cartao-pagina {
     width: min(100%, 960px);
     padding: 28px;
@@ -391,35 +421,200 @@ body {
         scroll-behavior: auto !important;
         transition-duration: 0.01ms !important;
     }
+
+    .menu-lateral,
+    .fundo-menu-mobile {
+        transition: none;
+    }
 }
 
 @media (max-width: 640px) {
+    html,
+    body {
+        width: 100%;
+        height: 100%;
+        min-width: 0;
+        min-height: 0;
+        overflow: hidden;
+        overscroll-behavior: none;
+    }
+
     .estrutura-sistema {
+        width: 100%;
+        height: 100vh;
+        height: 100dvh;
+        min-height: 0;
         grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: auto minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr);
+        overflow: hidden;
     }
 
     .menu-lateral {
-        gap: 14px;
-        padding: 16px 18px 12px;
+        position: fixed;
+        z-index: 1002;
+        inset: 0 auto 0 0;
+        width: min(84vw, 310px);
+        height: 100vh;
+        height: 100dvh;
+        gap: 22px;
+        padding: max(18px, env(safe-area-inset-top)) 18px max(14px, env(safe-area-inset-bottom));
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        box-shadow: 16px 0 44px rgb(15 23 42 / 32%);
+        transform: translateX(-105%);
+        transition: transform 220ms ease;
     }
 
     .rodape-menu {
-        margin-top: 0;
+        margin-top: auto;
         padding-top: 11px;
     }
 
     .navegacao-principal {
-        display: flex;
-        flex-wrap: wrap;
+        display: grid;
+        gap: 5px;
     }
 
     .conteudo-principal {
-        min-height: calc(100vh - 108px);
-        padding: 16px;
+        display: grid;
+        width: 100%;
+        height: 100vh;
+        height: 100dvh;
+        min-width: 0;
+        min-height: 0;
+        grid-template-rows: calc(54px + env(safe-area-inset-top)) minmax(0, 1fr);
+        padding: 0;
+        overflow: hidden;
+    }
+
+    .barra-superior-mobile {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        padding: max(8px, env(safe-area-inset-top)) 16px 8px;
+        border-bottom: 1px solid rgb(49 66 94 / 12%);
+        background: rgb(247 250 248 / 78%);
+        color: #34465d;
+        font-size: 0.95rem;
+        font-weight: 550;
+        backdrop-filter: blur(14px);
+    }
+
+    .barra-superior-mobile strong {
+        color: #26384e;
+    }
+
+    .botao-abrir-menu-mobile,
+    .botao-fechar-menu-mobile {
+        display: grid;
+        flex: 0 0 auto;
+        width: 40px;
+        height: 40px;
+        border: 1px solid rgb(49 66 94 / 13%);
+        border-radius: 10px;
+        background: rgb(255 255 255 / 75%);
+        color: #31425e;
+        cursor: pointer;
+        place-items: center;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .botao-abrir-menu-mobile svg,
+    .botao-fechar-menu-mobile svg {
+        width: 21px;
+        height: 21px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.8;
+    }
+
+    .botao-fechar-menu-mobile {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        border-color: rgb(203 213 225 / 24%);
+        background: rgb(255 255 255 / 6%);
+        color: #d8e1eb;
+    }
+
+    .area-conteudo {
+        display: grid;
+        min-width: 0;
+        min-height: 0;
+        padding: 14px;
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: none;
+        place-items: safe center;
+    }
+
+    .area-conteudo::-webkit-scrollbar,
+    .menu-lateral::-webkit-scrollbar {
+        display: none;
     }
 
     .cartao-pagina {
-        padding: 22px;
+        width: min(100%, 960px);
+        max-width: 100%;
+        padding: clamp(16px, 5vw, 22px);
+    }
+
+    .fundo-menu-mobile {
+        position: fixed;
+        z-index: 1001;
+        inset: 0;
+        display: block;
+        visibility: hidden;
+        background: rgb(10 18 30 / 34%);
+        opacity: 0;
+        pointer-events: none;
+        backdrop-filter: blur(0);
+        transition: opacity 220ms ease, backdrop-filter 220ms ease, visibility 220ms;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .controle-menu-mobile:checked ~ .estrutura-sistema .menu-lateral {
+        transform: translateX(0);
+    }
+
+    .controle-menu-mobile:checked ~ .estrutura-sistema .fundo-menu-mobile {
+        visibility: visible;
+        opacity: 1;
+        pointer-events: auto;
+        backdrop-filter: blur(6px);
+    }
+
+    .controle-menu-mobile:focus-visible ~ .estrutura-sistema .botao-abrir-menu-mobile {
+        outline: 3px solid #5b7da5;
+        outline-offset: 3px;
+    }
+
+    .cartao-usuarios {
+        align-self: stretch;
+    }
+
+    .cartao-usuarios .tabela-usuarios-conteiner {
+        overflow: visible;
+    }
+
+    .atalho-suporte {
+        right: 18px;
+        bottom: max(18px, env(safe-area-inset-bottom));
+    }
+}
+
+@media (max-width: 360px) {
+    .area-conteudo {
+        padding: 10px;
+    }
+
+    .cartao-pagina {
+        padding: 15px 13px;
     }
 }

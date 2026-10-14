@@ -8,23 +8,31 @@
     {% block estilos_pagina %}{% endblock %}
 </head>
 <body>
+    <input class="controle-menu-mobile" type="checkbox" id="menu-lateral-aberto" aria-label="Exibir barra lateral">
     <div class="estrutura-sistema">
         <aside class="menu-lateral" aria-label="Menu principal">
-            <a class="marca-sistema" href="{{ url_for('inicio.exibir_inicio') }}" aria-label="Ponto Batista — início">
-                <span class="simbolo-marca" aria-hidden="true">
-                    <svg viewBox="0 0 32 32" focusable="false">
-                        <circle class="mostrador-marca" cx="16" cy="16" r="12"></circle>
-                        <path class="marcas-mostrador" d="M16 6v2m10 8h-2M16 26v-2M6 16h2"></path>
-                        <path class="ponteiro-minutos" d="M16 16V9"></path>
-                        <path class="ponteiro-segundos" d="M16 16l6 3"></path>
-                        <circle class="centro-mostrador" cx="16" cy="16" r="1.5"></circle>
+            <div class="cabecalho-menu-lateral">
+                <a class="marca-sistema" href="{{ url_for('inicio.exibir_inicio') }}" aria-label="Ponto Batista — início">
+                    <span class="simbolo-marca" aria-hidden="true">
+                        <svg viewBox="0 0 32 32" focusable="false">
+                            <circle class="mostrador-marca" cx="16" cy="16" r="12"></circle>
+                            <path class="marcas-mostrador" d="M16 6v2m10 8h-2M16 26v-2M6 16h2"></path>
+                            <path class="ponteiro-minutos" d="M16 16V9"></path>
+                            <path class="ponteiro-segundos" d="M16 16l6 3"></path>
+                            <circle class="centro-mostrador" cx="16" cy="16" r="1.5"></circle>
+                        </svg>
+                    </span>
+                    <span class="texto-marca">
+                        <span class="nome-marca">Ponto <strong>Batista</strong></span>
+                        <span class="assinatura-marca">Tempo e presença escolar</span>
+                    </span>
+                </a>
+                <label class="botao-fechar-menu-mobile" for="menu-lateral-aberto" aria-label="Fechar menu" title="Fechar menu">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="m6 6 12 12M18 6 6 18"></path>
                     </svg>
-                </span>
-                <span class="texto-marca">
-                    <span class="nome-marca">Ponto <strong>Batista</strong></span>
-                    <span class="assinatura-marca">Tempo e presença escolar</span>
-                </span>
-            </a>
+                </label>
+            </div>
 
             <nav class="navegacao-principal" aria-label="Navegação principal">
                 {% for item in itens_menu %}
@@ -110,8 +118,20 @@
             </div>
         </aside>
 
+        <label class="fundo-menu-mobile" for="menu-lateral-aberto" aria-label="Fechar menu"></label>
+
         <main class="conteudo-principal">
-            {% block conteudo %}{% endblock %}
+            <header class="barra-superior-mobile">
+                <label class="botao-abrir-menu-mobile" for="menu-lateral-aberto" aria-label="Abrir menu" title="Abrir menu">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M4 7h16M4 12h16M4 17h16"></path>
+                    </svg>
+                </label>
+                <span>Ponto <strong>Batista</strong></span>
+            </header>
+            <div class="area-conteudo">
+                {% block conteudo %}{% endblock %}
+            </div>
         </main>
     </div>
 </body>
