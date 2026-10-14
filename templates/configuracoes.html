@@ -28,9 +28,7 @@
 
             <form id="formulario-marco-zero" class="formulario-marco-zero">
                 <label for="endereco-marco-zero">CEP, rua, número e local</label>
-                <input id="endereco-marco-zero" name="endereco" type="text" maxlength="500"
-                       placeholder="Ex.: Rua das Flores, 123 — Escola Batista, São Paulo - SP"
-                       value="{{ marco_endereco }}" required>
+                <input id="endereco-marco-zero" name="endereco" type="text" maxlength="500" value="{{ marco_endereco }}" required>
 
                 <div class="linha-coordenadas">
                     <label>
@@ -41,16 +39,13 @@
                     </label>
                     <label>
                         Longitude
-                        <input id="longitude-marco-zero" name="longitude" type="number" step="any"
-                               min="-180" max="180" placeholder="Obtida pela localização"
-                               value="{{ marco_longitude if marco_longitude is not none else '' }}" required>
+                        <input id="longitude-marco-zero" name="longitude" type="number" step="any" min="-180" max="180" value="{{ marco_longitude if marco_longitude is not none else '' }}" required>
                     </label>
                 </div>
 
                 <label for="raio-marco-zero">Raio permitido para bater ponto (máximo 100 m)</label>
                 <div class="campo-raio">
-                    <input id="raio-marco-zero" name="raio_metros" type="number" min="1" max="100" step="1"
-                           value="{{ raio_ponto }}" required>
+                    <input id="raio-marco-zero" name="raio_metros" type="number" min="1" max="100" step="1" value="{{ raio_ponto }}" required>
                     <span>metros</span>
                 </div>
 
