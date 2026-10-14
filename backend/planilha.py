@@ -17,23 +17,26 @@ TIPOS_BATIDA = ("Entrada", "Intervalo", "Retorno intervalo", "Saída")
 TIPOS_PERIODO = {"dia", "semana", "mes", "intervalo"}
 
 
-def buscar_colaboradores():
+def buscar_usuarios_exportacao():
     with criar_conexao() as conexao:
         return conexao.execute(
             """
             SELECT id, nome_completo, tipo_conta
             FROM usuarios
-            WHERE tipo_conta IN ('Administração', 'Professor', 'Colaborador')
             ORDER BY nome_completo
             """
         ).fetchall()
 
 
 def converter_data(valor):
-    try:
-        return date.fromisoformat(valor)
-    except (TypeError, ValueError):
+    if not valor:
         return None
+    for formato in ("%d/%m/%y", "%d/%m/%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(valor, formato).date()
+        except (TypeError, ValueError):
+            pass
+    return None
 
 
 def obter_periodo(formulario):
@@ -52,7 +55,11 @@ def obter_periodo(formulario):
 
     if tipo == "mes":
         try:
-            ano, mes = (int(parte) for parte in formulario.get("mes", "").split("-"))
+            valor_mes = formulario.get("mes", "")
+            if "/" in valor_mes:
+                mes, ano = (int(parte) for parte in valor_mes.split("/"))
+            else:
+                ano, mes = (int(parte) for parte in valor_mes.split("-"))
             inicio = date(ano, mes, 1)
         except (TypeError, ValueError):
             return None, None, "Informe um mês válido."
@@ -67,7 +74,7 @@ def obter_periodo(formulario):
     return inicio, fim, None
 
 
-def buscar_registros(inicio, fim, usuario_id=None):
+def buscar_registros(inicio, fim, ids_usuarios=None):
     consulta = """
         SELECT registro.usuario_id,
                COALESCE(usuario.nome_completo, registro.usuario_nome, 'Usuário removido'),
@@ -80,9 +87,11 @@ def buscar_registros(inicio, fim, usuario_id=None):
         WHERE registro.data_ponto BETWEEN %s AND %s
     """
     parametros = [inicio, fim]
-    if usuario_id:
-        consulta += " AND registro.usuario_id = %s"
-        parametros.append(usuario_id)
+    if ids_usuarios is not None:
+        if not ids_usuarios:
+            return []
+        consulta += " AND registro.usuario_id = ANY(%s)"
+        parametros.append(ids_usuarios)
     consulta += " ORDER BY registro.data_ponto, registro.usuario_nome, registro.registrado_em"
     with criar_conexao() as conexao:
         with conexao.cursor() as cursor:
@@ -90,19 +99,21 @@ def buscar_registros(inicio, fim, usuario_id=None):
             return cursor.fetchall()
 
 
-def buscar_jornadas(usuario_id=None):
+def buscar_jornadas(ids_usuarios=None):
     consulta = """
         SELECT jornada.usuario_id, jornada.dia_semana,
                jornada.entrada, jornada.intervalo,
                jornada.retorno_intervalo, jornada.saida
         FROM jornadas_usuarios AS jornada
         JOIN usuarios AS usuario ON usuario.id = jornada.usuario_id
-        WHERE usuario.tipo_conta IN ('Administração', 'Professor', 'Colaborador')
+        WHERE TRUE
     """
     parametros = []
-    if usuario_id:
-        consulta += " AND jornada.usuario_id = %s"
-        parametros.append(usuario_id)
+    if ids_usuarios is not None:
+        if not ids_usuarios:
+            return {}
+        consulta += " AND jornada.usuario_id = ANY(%s)"
+        parametros.append(ids_usuarios)
     with criar_conexao() as conexao:
         with conexao.cursor() as cursor:
             cursor.execute(consulta, parametros)
@@ -119,7 +130,7 @@ def duracao_horario(inicio, fim):
     return duracao if duracao >= timedelta() else duracao + timedelta(days=1)
 
 
-def calcular_totais(registros, jornadas, inicio, fim, usuario_id=None):
+def calcular_totais(registros, jornadas, inicio, fim, ids_usuarios=None):
     batidas = {}
     ids_com_registros = set()
     for id_usuario, nome, tipo_conta, dia, tipo, registrado_em in registros:
@@ -129,8 +140,8 @@ def calcular_totais(registros, jornadas, inicio, fim, usuario_id=None):
         ids_com_registros.add(id_usuario)
 
     ids = {id_usuario for id_usuario in jornadas}
-    if usuario_id:
-        ids = {usuario_id}
+    if ids_usuarios is not None:
+        ids = set(ids_usuarios)
     else:
         ids |= ids_com_registros
 
@@ -253,9 +264,32 @@ def dados_formulario(formulario):
         "mes": formulario.get("mes", ""),
         "data_inicio": formulario.get("data_inicio", ""),
         "data_fim": formulario.get("data_fim", ""),
-        "usuario_id": formulario.get("usuario_id", ""),
+        "escopo": formulario.get("escopo", "sistema"),
+        "nome_manual": formulario.get("nome_manual", "").strip(),
         "tipo_batida": formulario.get("tipo_batida", "Todas"),
     }
+
+
+def filtrar_colaboradores(colaboradores, escopo, nome_manual):
+    if nome_manual:
+        termo = nome_manual.casefold()
+        correspondentes = [
+            usuario for usuario in colaboradores if termo in usuario[1].casefold()
+        ]
+        return correspondentes, f"Pesquisa por nome: {nome_manual}"
+    if escopo in {"Professor", "Colaborador"}:
+        correspondentes = [usuario for usuario in colaboradores if usuario[2] == escopo]
+        return correspondentes, f"Todos: {escopo}"
+    if escopo == "sistema":
+        return colaboradores, "Todos do sistema"
+    if escopo.startswith("usuario:"):
+        try:
+            usuario_id = int(escopo.split(":", 1)[1])
+        except ValueError:
+            return [], ""
+        correspondentes = [usuario for usuario in colaboradores if usuario[0] == usuario_id]
+        return correspondentes, correspondentes[0][1] if correspondentes else ""
+    return None, ""
 
 
 @rota_planilha.route("/planilha", methods=["GET", "POST"])
@@ -265,28 +299,24 @@ def exibir_planilha():
     erro = None
     if request.method == "POST":
         inicio, fim, erro = obter_periodo(request.form)
-        usuario_id = campos["usuario_id"] or None
-        if usuario_id:
-            try:
-                usuario_id = int(usuario_id)
-            except ValueError:
-                erro = "Selecione um colaborador válido."
+        escopo = campos["escopo"]
+        if escopo not in {"sistema", "Professor", "Colaborador"} and not escopo.startswith("usuario:"):
+            erro = "Selecione uma opção de colaborador válida."
         tipo_batida = campos["tipo_batida"]
         if tipo_batida not in {"Todas", *TIPOS_BATIDA}:
             erro = "Selecione um tipo de ponto válido."
         if not erro:
-            colaboradores = buscar_colaboradores()
-            colaborador_selecionado = next(
-                (colaborador for colaborador in colaboradores if colaborador[0] == usuario_id),
-                None,
-            ) if usuario_id else None
-            if usuario_id and not colaborador_selecionado:
-                erro = "O colaborador selecionado não foi encontrado."
+            colaboradores = buscar_usuarios_exportacao()
+            colaboradores_filtrados, nome = filtrar_colaboradores(
+                colaboradores, escopo, campos["nome_manual"]
+            )
+            if not colaboradores_filtrados:
+                erro = "Nenhum usuário corresponde à seleção ou ao nome informado."
             else:
-                registros = buscar_registros(inicio, fim, usuario_id)
-                jornadas = buscar_jornadas(usuario_id)
-                totais = calcular_totais(registros, jornadas, inicio, fim, usuario_id)
-                nome = colaborador_selecionado[1] if colaborador_selecionado else "Todos"
+                ids_usuarios = [colaborador[0] for colaborador in colaboradores_filtrados]
+                registros = buscar_registros(inicio, fim, ids_usuarios)
+                jornadas = buscar_jornadas(ids_usuarios)
+                totais = calcular_totais(registros, jornadas, inicio, fim, ids_usuarios)
                 arquivo = criar_planilha(registros, inicio, fim, tipo_batida, nome, totais)
                 nome_arquivo = f"ponto_{inicio.isoformat()}_{fim.isoformat()}.xlsx"
                 return send_file(
@@ -299,7 +329,7 @@ def exibir_planilha():
     return renderizar_pagina(
         "planilha.html",
         "planilha",
-        colaboradores=buscar_colaboradores(),
+        colaboradores=buscar_usuarios_exportacao(),
         campos=campos,
         erro_planilha=erro,
     )

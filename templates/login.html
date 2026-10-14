@@ -19,16 +19,16 @@
                 <p class="mensagem-erro" role="alert">{{ mensagem_erro }}</p>
             {% endif %}
 
-            <form class="formulario-login" action="" method="post">
+            <form class="formulario-login" action="" method="post" autocomplete="off">
                 <div class="campo-formulario">
                     <label for="login">Login</label>
-                    <input id="login" name="login" type="text" autocomplete="username" required>
+                    <input id="login" name="login" type="text" autocomplete="off" required>
                 </div>
 
                 <div class="campo-formulario">
                     <label for="senha">Senha</label>
                     <div class="entrada-senha">
-                        <input id="senha" name="senha" type="password" autocomplete="current-password" required>
+                        <input id="senha" name="senha" type="password" autocomplete="new-password" required>
                         <button
                             class="botao-visualizar-senha"
                             id="alternar-visibilidade-senha"

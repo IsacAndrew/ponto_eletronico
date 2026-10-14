@@ -268,7 +268,6 @@
     background: #f2f6f3;
 }
 
-.etiqueta-permissao,
 .estado-usuario {
     display: inline-block;
     padding: 5px 8px;
@@ -276,11 +275,6 @@
     font-size: 0.76rem;
     font-weight: 600;
     white-space: nowrap;
-}
-
-.etiqueta-permissao {
-    background: #e9eff5;
-    color: #405779;
 }
 
 .estado-ativo {

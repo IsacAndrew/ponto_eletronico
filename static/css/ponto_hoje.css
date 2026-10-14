@@ -1,3 +1,156 @@
 .cartao-ponto-hoje {
     --cor-destaque: #405779;
+    width: min(100%, 1240px);
+}
+
+.cartao-ponto-hoje h1 {
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+.busca-ponto-hoje {
+    width: min(100%, 560px);
+    margin-bottom: 18px;
+}
+
+.busca-ponto-hoje > label {
+    display: block;
+    margin-bottom: 7px;
+    color: #405064;
+    font-size: .86rem;
+    font-weight: 600;
+}
+
+.campo-busca-ponto-hoje {
+    display: flex;
+    gap: 9px;
+}
+
+.campo-busca-ponto-hoje input {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 9px 12px;
+    border: 1px solid #cbd6d1;
+    border-radius: 8px;
+    background: #fbfcfb;
+    font: inherit;
+}
+
+.campo-busca-ponto-hoje button {
+    min-height: 44px;
+    padding: 0 16px;
+    border: 1px solid #31445c;
+    border-radius: 8px;
+    background: #31445c;
+    color: #fff;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.tabela-ponto-hoje-conteiner {
+    overflow-x: auto;
+    border: 1px solid #d7e0dc;
+    border-radius: 9px;
+    background: #fbfcfb;
+}
+
+.tabela-ponto-hoje {
+    width: 100%;
+    border-collapse: collapse;
+    color: #344239;
+    font-size: .88rem;
+    text-align: left;
+}
+
+.tabela-ponto-hoje th,
+.tabela-ponto-hoje td {
+    padding: 13px 12px;
+    border-bottom: 1px solid #e1e8e4;
+}
+
+.tabela-ponto-hoje th {
+    background: #edf2ef;
+    color: #405064;
+    font-size: .78rem;
+    white-space: nowrap;
+}
+
+.tabela-ponto-hoje tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.sem-registros {
+    padding: 28px !important;
+    color: #64756c;
+    text-align: center;
+}
+
+@media (max-width: 640px) {
+    .cartao-ponto-hoje {
+        align-self: stretch;
+    }
+
+    .tabela-ponto-hoje-conteiner {
+        overflow: visible;
+    }
+
+    .tabela-ponto-hoje thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+
+    .tabela-ponto-hoje,
+    .tabela-ponto-hoje tbody {
+        display: block;
+    }
+
+    .tabela-ponto-hoje tbody tr {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding: 8px 12px;
+        border-bottom: 1px solid #e1e8e4;
+    }
+
+    .tabela-ponto-hoje tbody tr:last-child {
+        border-bottom: 0;
+    }
+
+    .tabela-ponto-hoje td {
+        display: grid;
+        gap: 4px;
+        padding: 9px 3px;
+        border: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .tabela-ponto-hoje td::before {
+        content: attr(data-label);
+        color: #687b8f;
+        font-size: .72rem;
+        font-weight: 650;
+    }
+
+    .tabela-ponto-hoje td:first-child {
+        grid-column: 1 / -1;
+        font-weight: 700;
+    }
+
+    .tabela-ponto-hoje .sem-registros {
+        display: block;
+        grid-column: 1 / -1;
+        text-align: center;
+    }
+}
+
+@media (max-width: 380px) {
+    .campo-busca-ponto-hoje {
+        flex-direction: column;
+    }
 }

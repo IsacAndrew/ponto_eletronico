@@ -490,9 +490,12 @@ body {
 
     .barra-superior-mobile {
         position: relative;
+        grid-column: 1 / -1;
+        width: 100%;
         z-index: 1;
         display: flex;
         align-items: center;
+        justify-content: flex-start;
         gap: 13px;
         padding: max(8px, env(safe-area-inset-top)) 16px 8px;
         border-bottom: 1px solid rgb(49 66 94 / 12%);
@@ -597,6 +600,27 @@ body {
 
     .cartao-usuarios {
         align-self: stretch;
+    }
+
+    .area-conteudo:has(.cartao-ponto) {
+        padding: 0;
+        place-items: stretch;
+    }
+
+    .cartao-ponto {
+        display: flex;
+        width: 100%;
+        max-width: none;
+        height: 100%;
+        min-height: 0;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        align-self: stretch;
+        border-right: 0;
+        border-left: 0;
+        border-radius: 0;
+        box-shadow: none;
     }
 
     .cartao-usuarios .tabela-usuarios-conteiner {

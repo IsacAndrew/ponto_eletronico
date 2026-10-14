@@ -1,6 +1,5 @@
 import re
-from datetime import datetime, time
-from zoneinfo import ZoneInfo
+from datetime import time
 
 from flask import Blueprint, redirect, request, session, url_for
 from werkzeug.security import generate_password_hash
@@ -14,7 +13,6 @@ DIAS_SEMANA = (
     "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira",
     "Sexta-feira", "Sábado", "Domingo",
 )
-FUSO_HORARIO = ZoneInfo("America/Sao_Paulo")
 CAMPOS_FILTRO = {
     "nome": "nome_completo",
     "email": "email",
@@ -25,7 +23,7 @@ CAMPOS_FILTRO = {
 
 def buscar_usuarios(filtro, busca):
     consulta = """
-        SELECT id, nome_completo, login, email, telefone, tipo_conta, ativo, ultimo_acesso
+        SELECT id, nome_completo, ativo
         FROM usuarios
     """
     parametros = []
@@ -51,14 +49,6 @@ def buscar_usuarios(filtro, busca):
             cursor.execute(consulta, parametros)
             nomes_colunas = [coluna.name for coluna in cursor.description]
             usuarios = [dict(zip(nomes_colunas, linha)) for linha in cursor.fetchall()]
-
-    for usuario in usuarios:
-        ultimo_acesso = usuario["ultimo_acesso"]
-        usuario["ultimo_acesso_formatado"] = (
-            ultimo_acesso.astimezone(FUSO_HORARIO).strftime("%d/%m/%Y às %H:%M")
-            if ultimo_acesso
-            else None
-        )
 
     return usuarios
 

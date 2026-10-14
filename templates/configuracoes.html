@@ -13,63 +13,67 @@
     <section class="cartao-pagina cartao-configuracoes">
         <h1>Configurações</h1>
         {% if conta_suporte and not modo_visualizacao %}
-        <p class="descricao-configuracoes">Defina o local autorizado para o registro de ponto.</p>
+            <section class="cartao-marco-zero" aria-labelledby="titulo-marco-zero">
+                <button class="botao-abrir-marco-zero" id="abrir-marco-zero" type="button" aria-haspopup="dialog">
+                    <span class="texto-marco-zero">
+                        <strong id="titulo-marco-zero">Marco Zero</strong>
+                        <span>O ponto de referência da escola. As batidas só serão aceitas dentro do raio definido.</span>
+                    </span>
+                    <span class="estado-marco-zero{% if marco_configurado %} estado-configurado{% endif %}">
+                        {{ "Configurado" if marco_configurado else "Pendente" }}
+                    </span>
+                    <span class="seta-marco-zero" aria-hidden="true">↓</span>
+                </button>
+                <input type="hidden" id="latitude-marco-zero" value="{{ marco_latitude if marco_latitude is not none else '' }}">
+                <input type="hidden" id="longitude-marco-zero" value="{{ marco_longitude if marco_longitude is not none else '' }}">
+                <input type="hidden" id="endereco-salvo-marco-zero" value="{{ marco_endereco }}">
+                <input type="hidden" id="raio-salvo-marco-zero" value="{{ raio_ponto }}">
+            </section>
 
-        <section class="cartao-marco-zero" aria-labelledby="titulo-marco-zero">
-            <div class="cabecalho-marco-zero">
-                <div>
-                    <h2 id="titulo-marco-zero">Marco zero</h2>
-                    <p>O ponto de referência da escola. As batidas só serão aceitas dentro do raio definido.</p>
-                </div>
-                <span class="estado-marco-zero{% if marco_configurado %} estado-configurado{% endif %}">
-                    {% if marco_configurado %}Configurado{% else %}Pendente{% endif %}
-                </span>
-            </div>
+            <dialog class="janela-marco-zero" id="janela-marco-zero" aria-labelledby="titulo-janela-marco-zero">
+                <section class="conteudo-janela-marco-zero">
+                    <header class="cabecalho-janela-marco-zero">
+                        <div>
+                            <span class="sobrelinha-marco-zero">Local autorizado para batida de ponto</span>
+                            <h2 id="titulo-janela-marco-zero">Marco Zero</h2>
+                        </div>
+                        <button class="botao-fechar-marco-zero" id="fechar-marco-zero" type="button" aria-label="Fechar">×</button>
+                    </header>
 
-            <form id="formulario-marco-zero" class="formulario-marco-zero">
-                <label for="endereco-marco-zero">CEP, rua, número e local</label>
-                <input id="endereco-marco-zero" name="endereco" type="text" maxlength="500" value="{{ marco_endereco }}" required>
+                    <form id="formulario-marco-zero" class="formulario-marco-zero">
+                        <label for="endereco-marco-zero">CEP, rua, número e local</label>
+                        <div class="linha-endereco-marco-zero">
+                            <input id="endereco-marco-zero" name="endereco" type="text" maxlength="500" value="{{ marco_endereco }}">
+                            <button class="botao-localizar-endereco" id="botao-localizar-endereco" type="button">Localizar</button>
+                        </div>
+                        <p class="ajuda-marco-zero">Informe o endereço e localize, ou mova o mapa até o ponto desejado.</p>
 
-                <div class="linha-coordenadas">
-                    <label>
-                        Latitude
-                        <input id="latitude-marco-zero" name="latitude" type="number" step="any"
-                               min="-90" max="90" placeholder="Obtida pela localização"
-                               value="{{ marco_latitude if marco_latitude is not none else '' }}" required>
-                    </label>
-                    <label>
-                        Longitude
-                        <input id="longitude-marco-zero" name="longitude" type="number" step="any" min="-180" max="180" value="{{ marco_longitude if marco_longitude is not none else '' }}" required>
-                    </label>
-                </div>
+                        <div class="mapa-marco-zero" id="mapa-marco-zero" data-latitude="{{ marco_latitude if marco_latitude is not none else '' }}" data-longitude="{{ marco_longitude if marco_longitude is not none else '' }}">
+                            <div class="camada-tiles-mapa" id="camada-tiles-mapa" aria-hidden="true"></div>
+                            <span class="marcador-centro-mapa" aria-hidden="true"></span>
+                            <div class="controles-mapa-marco-zero">
+                                <button id="aproximar-mapa" type="button" aria-label="Aproximar mapa">+</button>
+                                <button id="afastar-mapa" type="button" aria-label="Afastar mapa">−</button>
+                            </div>
+                            <p class="instrucao-mapa-vazio" id="instrucao-mapa-vazio">Busque o endereço ou use sua localização para abrir o mapa.</p>
+                            <a class="credito-mapa" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap</a>
+                        </div>
 
-                <label for="raio-marco-zero">Raio permitido para bater ponto (máximo 100 m)</label>
-                <div class="campo-raio">
-                    <input id="raio-marco-zero" name="raio_metros" type="number" min="1" max="100" step="1" value="{{ raio_ponto }}" required>
-                    <span>metros</span>
-                </div>
+                        <div class="acoes-mapa-marco-zero">
+                            <button class="botao-localizacao" id="botao-usar-localizacao" type="button">Usar minha localização</button>
+                            <button class="botao-confirmar-mapa" id="botao-confirmar-mapa" type="button" disabled>Usar centro do mapa</button>
+                        </div>
 
-                <div class="acoes-marco-zero">
-                    <button class="botao-localizacao" id="botao-usar-localizacao" type="button">
-                        Usar minha localização atual
-                    </button>
-                    <button class="botao-salvar-marco" type="submit">Salvar marco zero</button>
-                </div>
-                <p class="mensagem-marco-zero" id="mensagem-marco-zero" role="status" aria-live="polite"></p>
-            </form>
-
-            <div class="mapa-marco-zero" id="mapa-marco-zero">
-                {% if marco_configurado %}
-                    <iframe title="Mapa do marco zero" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
-                            src="https://maps.google.com/maps?q={{ marco_latitude }},{{ marco_longitude }}&z=17&output=embed"></iframe>
-                {% else %}
-                    <p>Salve as coordenadas para visualizar o local no Google Maps.</p>
-                {% endif %}
-            </div>
-            <p class="nota-marco-zero">A localização é obtida pelo navegador. Para maior precisão, use um dispositivo com GPS e permita o acesso à localização.</p>
-        </section>
-        {% else %}
-            <p>As configurações da conta ficarão disponíveis aqui.</p>
+                        <label for="raio-marco-zero">Raio permitido (máximo 100 metros)</label>
+                        <div class="campo-raio"><input id="raio-marco-zero" name="raio_metros" type="number" min="1" max="100" step="1" value="{{ raio_ponto }}" required><span>metros</span></div>
+                        <p class="mensagem-marco-zero" id="mensagem-marco-zero" role="status" aria-live="polite"></p>
+                        <footer class="acoes-salvar-marco-zero">
+                            <button class="botao-cancelar-marco" id="cancelar-marco-zero" type="button">Cancelar</button>
+                            <button class="botao-salvar-marco" type="submit">Salvar marco zero</button>
+                        </footer>
+                    </form>
+                </section>
+            </dialog>
         {% endif %}
     </section>
 {% endblock %}

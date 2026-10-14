@@ -4,6 +4,7 @@
 
 {% block estilos_pagina %}
     <link rel="stylesheet" href="/static/css/planilha.css">
+    <script src="/static/js/planilha.js" defer></script>
 {% endblock %}
 
 {% block conteudo %}
@@ -18,15 +19,26 @@
 
         <form class="filtros-planilha" method="post" action="{{ url_for('planilha.exibir_planilha') }}">
             <div class="campo-planilha campo-colaborador">
-                <label for="colaborador">Colaborador ou professor</label>
-                <select id="colaborador" name="usuario_id">
-                    <option value="">Todos os colaboradores e professores</option>
+                <label for="escopo">Colaborador, professor ou grupo</label>
+                <select id="escopo" name="escopo">
+                    <option value="sistema" {% if campos.escopo == 'sistema' %}selected{% endif %}>Todos do sistema</option>
+                    <option value="Professor" {% if campos.escopo == 'Professor' %}selected{% endif %}>Todos os professores</option>
+                    <option value="Colaborador" {% if campos.escopo == 'Colaborador' %}selected{% endif %}>Todos os colaboradores</option>
+                    <optgroup label="Selecionar uma pessoa">
                     {% for colaborador in colaboradores %}
-                        <option value="{{ colaborador[0] }}" {% if campos.usuario_id|string == colaborador[0]|string %}selected{% endif %}>
+                        <option value="usuario:{{ colaborador[0] }}" {% if campos.escopo == 'usuario:' ~ colaborador[0] %}selected{% endif %}>
                             {{ colaborador[1] }} · {{ colaborador[2] }}
                         </option>
                     {% endfor %}
+                    </optgroup>
                 </select>
+                <label for="nome-manual">Ou pesquise pelo nome</label>
+                <input id="nome-manual" name="nome_manual" type="search" value="{{ campos.nome_manual }}"
+                       list="nomes-colaboradores" autocomplete="off" aria-describedby="dica-colaborador">
+                <datalist id="nomes-colaboradores">
+                    {% for colaborador in colaboradores %}<option value="{{ colaborador[1] }}">{% endfor %}
+                </datalist>
+                <small id="dica-colaborador">Ao informar um nome, a pesquisa pelo nome será usada no relatório.</small>
             </div>
 
             <div class="campo-planilha campo-periodo">
@@ -37,27 +49,30 @@
                     <option value="mes" {% if campos.periodo == 'mes' %}selected{% endif %}>Mês</option>
                     <option value="intervalo" {% if campos.periodo == 'intervalo' %}selected{% endif %}>De uma data a outra</option>
                 </select>
-                <small>Preencha somente as datas correspondentes ao período escolhido.</small>
             </div>
 
             <div class="campo-planilha campo-data-referencia">
                 <label for="data-referencia">Data do dia ou da semana</label>
-                <input id="data-referencia" name="data_referencia" type="date" value="{{ campos.data_referencia }}">
+                <input id="data-referencia" name="data_referencia" type="text" inputmode="numeric" data-formato-data
+                       placeholder="dd/mm/aa" maxlength="8" value="{{ campos.data_referencia }}">
             </div>
 
             <div class="campo-planilha campo-mes">
                 <label for="mes">Mês</label>
-                <input id="mes" name="mes" type="month" value="{{ campos.mes }}">
+                <input id="mes" name="mes" type="text" inputmode="numeric" data-formato-mes
+                       placeholder="mm/aaaa" maxlength="7" value="{{ campos.mes }}">
             </div>
 
             <div class="campo-planilha campo-data-inicio">
                 <label for="data-inicio">Data inicial</label>
-                <input id="data-inicio" name="data_inicio" type="date" value="{{ campos.data_inicio }}">
+                <input id="data-inicio" name="data_inicio" type="text" inputmode="numeric" data-formato-data
+                       placeholder="dd/mm/aa" maxlength="8" value="{{ campos.data_inicio }}">
             </div>
 
             <div class="campo-planilha campo-data-fim">
                 <label for="data-fim">Data final</label>
-                <input id="data-fim" name="data_fim" type="date" value="{{ campos.data_fim }}">
+                <input id="data-fim" name="data_fim" type="text" inputmode="numeric" data-formato-data
+                       placeholder="dd/mm/aa" maxlength="8" value="{{ campos.data_fim }}">
             </div>
 
             <div class="campo-planilha campo-tipo">
@@ -72,7 +87,6 @@
             </div>
 
             <div class="rodape-filtros-planilha">
-                <p>O resumo de horas considera todas as batidas, mesmo quando a tabela é filtrada por um tipo específico.</p>
                 <button class="botao-baixar-planilha" type="submit">
                     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <path d="M12 3v12m0 0 4-4m-4 4-4-4"></path>

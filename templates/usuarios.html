@@ -61,11 +61,7 @@
                 <thead>
                     <tr>
                         <th scope="col">Nome</th>
-                        <th scope="col">Email</th>
-                        <th scope="col">Telefone</th>
-                        <th scope="col">Permissão</th>
                         <th scope="col">Status</th>
-                        <th scope="col">Último acesso</th>
                         <th scope="col"><span class="sr-only">Editar</span></th>
                     </tr>
                 </thead>
@@ -73,15 +69,11 @@
                     {% for usuario in usuarios %}
                         <tr>
                             <td data-label="Nome">{{ usuario.nome_completo }}</td>
-                            <td data-label="Email">{{ usuario.email }}</td>
-                            <td data-label="Telefone">{{ usuario.telefone }}</td>
-                            <td data-label="Permissão"><span class="etiqueta-permissao">{{ usuario.tipo_conta }}</span></td>
                             <td data-label="Status">
                                 <span class="estado-usuario {% if usuario.ativo %}estado-ativo{% else %}estado-inativo{% endif %}">
                                     {{ "Ativo" if usuario.ativo else "Inativo" }}
                                 </span>
                             </td>
-                            <td data-label="Último acesso">{{ usuario.ultimo_acesso_formatado or "Nunca acessou" }}</td>
                             <td class="celula-editar" data-label="Ação">
                                 <a class="botao-editar" href="{{ url_for('usuarios.editar_usuario', usuario_id=usuario.id, filtro=filtro_atual, busca=busca) }}"
                                    aria-label="Editar {{ usuario.nome_completo }}" title="Editar usuário">
@@ -93,7 +85,7 @@
                         </tr>
                     {% else %}
                         <tr>
-                            <td class="sem-usuarios" colspan="7">Nenhum usuário encontrado para este filtro.</td>
+                            <td class="sem-usuarios" colspan="3">Nenhum usuário encontrado para este filtro.</td>
                         </tr>
                     {% endfor %}
                 </tbody>

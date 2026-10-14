@@ -9,6 +9,33 @@
 {% block conteudo %}
     <section class="cartao-pagina cartao-db">
         <h1>Banco de dados</h1>
-        <p>Informações do banco de dados disponíveis somente para Suporte.</p>
+        <section class="painel-armazenamento" aria-labelledby="titulo-armazenamento">
+            <div class="cabecalho-armazenamento">
+                <div>
+                    <span class="sobrelinha-db">Armazenamento</span>
+                    <h2 id="titulo-armazenamento">{{ nome_banco }}</h2>
+                </div>
+                <strong>{{ percentual }}%</strong>
+            </div>
+            <div class="trilho-armazenamento" role="progressbar" aria-label="Armazenamento do banco usado"
+                 aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ percentual }}">
+                <span class="progresso-armazenamento" style="width: {{ percentual }}%"></span>
+            </div>
+            <p class="resumo-armazenamento">{{ (tamanho_bytes / 1000000)|round(1) }} MB usados de {{ (limite_bytes / 1000000)|round(0)|int }} MB</p>
+        </section>
+
+        <section class="painel-limpeza-db" aria-labelledby="titulo-limpeza-db">
+            <h2 id="titulo-limpeza-db">Limpar dados do sistema</h2>
+            <p>A ação remove usuários, registros de ponto, jornadas e configurações. As tabelas permanecem, mas não haverá contas para entrar até que um novo acesso seja criado.</p>
+            {% if mensagem_erro == 'senha' %}<p class="erro-db" role="alert">A senha do Suporte está incorreta.</p>{% endif %}
+            {% if mensagem_erro == 'confirmacao' %}<p class="erro-db" role="alert">Digite APAGAR TUDO para confirmar.</p>{% endif %}
+            <form method="post" action="{{ url_for('db.apagar_dados_sistema') }}">
+                <label for="senha-apagar-db">Confirme sua senha do Suporte</label>
+                <input id="senha-apagar-db" name="senha" type="password" autocomplete="current-password" required>
+                <label for="confirmacao-apagar-db">Digite APAGAR TUDO</label>
+                <input id="confirmacao-apagar-db" name="confirmacao" type="text" autocomplete="off" required>
+                <button class="botao-apagar-db" type="submit">Apagar todos os dados</button>
+            </form>
+        </section>
     </section>
 {% endblock %}

@@ -4,11 +4,43 @@
 
 {% block estilos_pagina %}
     <link rel="stylesheet" href="/static/css/ponto_hoje.css">
+    <script src="/static/js/ponto_hoje.js" defer></script>
 {% endblock %}
 
 {% block conteudo %}
-    <section class="cartao-pagina cartao-ponto-hoje">
+    <section class="cartao-pagina cartao-ponto-hoje" data-data-hoje="{{ data_hoje }}">
         <h1>Ponto Hoje</h1>
-        <p>Registros de ponto recentes do dia aparecerão aqui.</p>
+        <form class="busca-ponto-hoje" method="get" action="{{ url_for('ponto_hoje.exibir_ponto_hoje') }}">
+            <label for="busca-ponto-hoje">Pesquisar pelo nome</label>
+            <div class="campo-busca-ponto-hoje">
+                <input id="busca-ponto-hoje" name="busca" type="search" value="{{ busca }}" autocomplete="off">
+                <button type="submit">Buscar</button>
+            </div>
+        </form>
+        <div class="tabela-ponto-hoje-conteiner">
+            <table class="tabela-ponto-hoje">
+                <thead>
+                    <tr>
+                        <th scope="col">Nome completo</th>
+                        <th scope="col">1ª batida</th>
+                        <th scope="col">2ª batida</th>
+                        <th scope="col">3ª batida</th>
+                        <th scope="col">4ª batida</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for registro in registros %}
+                        <tr>
+                            <td data-label="Nome completo">{{ registro.nome }}</td>
+                            {% for batida in registro.batidas %}
+                                <td data-label="{{ loop.index }}ª batida">{{ batida or "Sem registro" }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% else %}
+                        <tr><td class="sem-registros" colspan="5">Nenhuma batida encontrada hoje.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </section>
 {% endblock %}
