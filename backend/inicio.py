@@ -1,10 +1,12 @@
 from datetime import datetime, timedelta
+from math import isfinite
 from zoneinfo import ZoneInfo
 
-from flask import Blueprint, jsonify, session
+from flask import Blueprint, jsonify, request, session
 
 from .permissoes import exigir_tipos_conta, renderizar_pagina
 from .banco_dados import criar_conexao
+from .localizacao import calcular_distancia_metros, obter_marco_zero
 
 rota_inicio = Blueprint("inicio", __name__)
 FUSO_HORARIO = ZoneInfo("America/Sao_Paulo")
@@ -46,6 +48,24 @@ def exibir_inicio():
 def registrar_ponto():
     usuario_id = session["usuario_id"]
     agora = datetime.now(FUSO_HORARIO)
+    dados_localizacao = request.get_json(silent=True) or {}
+    try:
+        latitude = float(dados_localizacao.get("latitude"))
+        longitude = float(dados_localizacao.get("longitude"))
+        precisao = float(dados_localizacao.get("precisao"))
+    except (TypeError, ValueError):
+        return jsonify(
+            sucesso=False,
+            mensagem="Ative a localização do dispositivo para registrar o ponto.",
+        ), 400
+
+    if (
+        not all(isfinite(valor) for valor in (latitude, longitude, precisao))
+        or not -90 <= latitude <= 90
+        or not -180 <= longitude <= 180
+        or precisao <= 0
+    ):
+        return jsonify(sucesso=False, mensagem="Não foi possível validar sua localização."), 400
 
     with criar_conexao() as conexao:
         with conexao.cursor() as cursor:
@@ -62,6 +82,34 @@ def registrar_ponto():
                     ),
                     401,
                 )
+
+            marco_zero = obter_marco_zero(conexao)
+            latitude_marco, longitude_marco, _, raio_metros = marco_zero
+            if latitude_marco is None or longitude_marco is None:
+                return jsonify(
+                    sucesso=False,
+                    mensagem="O marco zero ainda não foi configurado pelo suporte.",
+                ), 503
+
+            distancia = calcular_distancia_metros(
+                latitude, longitude, latitude_marco, longitude_marco
+            )
+            if distancia > raio_metros:
+                return jsonify(
+                    sucesso=False,
+                    mensagem=(
+                        f"Ponto não registrado: você está a aproximadamente "
+                        f"{round(distancia)} m do marco zero. O limite é {raio_metros} m."
+                    ),
+                ), 403
+            if distancia + precisao > raio_metros:
+                return jsonify(
+                    sucesso=False,
+                    mensagem=(
+                        "Não foi possível confirmar que você está dentro do raio permitido. "
+                        "Ative o GPS e tente novamente mais perto do marco zero."
+                    ),
+                ), 409
 
             cursor.execute(
                 """

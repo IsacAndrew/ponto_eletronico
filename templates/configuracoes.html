@@ -4,11 +4,77 @@
 
 {% block estilos_pagina %}
     <link rel="stylesheet" href="/static/css/configuracoes.css">
+    {% if conta_suporte and not modo_visualizacao %}
+        <script src="/static/js/configuracoes.js" defer></script>
+    {% endif %}
 {% endblock %}
 
 {% block conteudo %}
     <section class="cartao-pagina cartao-configuracoes">
         <h1>Configurações</h1>
-        <p>As configurações do sistema ficarão disponíveis aqui.</p>
+        {% if conta_suporte and not modo_visualizacao %}
+        <p class="descricao-configuracoes">Defina o local autorizado para o registro de ponto.</p>
+
+        <section class="cartao-marco-zero" aria-labelledby="titulo-marco-zero">
+            <div class="cabecalho-marco-zero">
+                <div>
+                    <h2 id="titulo-marco-zero">Marco zero</h2>
+                    <p>O ponto de referência da escola. As batidas só serão aceitas dentro do raio definido.</p>
+                </div>
+                <span class="estado-marco-zero{% if marco_configurado %} estado-configurado{% endif %}">
+                    {% if marco_configurado %}Configurado{% else %}Pendente{% endif %}
+                </span>
+            </div>
+
+            <form id="formulario-marco-zero" class="formulario-marco-zero">
+                <label for="endereco-marco-zero">CEP, rua, número e local</label>
+                <input id="endereco-marco-zero" name="endereco" type="text" maxlength="500"
+                       placeholder="Ex.: Rua das Flores, 123 — Escola Batista, São Paulo - SP"
+                       value="{{ marco_endereco }}" required>
+
+                <div class="linha-coordenadas">
+                    <label>
+                        Latitude
+                        <input id="latitude-marco-zero" name="latitude" type="number" step="any"
+                               min="-90" max="90" placeholder="Obtida pela localização"
+                               value="{{ marco_latitude if marco_latitude is not none else '' }}" required>
+                    </label>
+                    <label>
+                        Longitude
+                        <input id="longitude-marco-zero" name="longitude" type="number" step="any"
+                               min="-180" max="180" placeholder="Obtida pela localização"
+                               value="{{ marco_longitude if marco_longitude is not none else '' }}" required>
+                    </label>
+                </div>
+
+                <label for="raio-marco-zero">Raio permitido para bater ponto (máximo 100 m)</label>
+                <div class="campo-raio">
+                    <input id="raio-marco-zero" name="raio_metros" type="number" min="1" max="100" step="1"
+                           value="{{ raio_ponto }}" required>
+                    <span>metros</span>
+                </div>
+
+                <div class="acoes-marco-zero">
+                    <button class="botao-localizacao" id="botao-usar-localizacao" type="button">
+                        Usar minha localização atual
+                    </button>
+                    <button class="botao-salvar-marco" type="submit">Salvar marco zero</button>
+                </div>
+                <p class="mensagem-marco-zero" id="mensagem-marco-zero" role="status" aria-live="polite"></p>
+            </form>
+
+            <div class="mapa-marco-zero" id="mapa-marco-zero">
+                {% if marco_configurado %}
+                    <iframe title="Mapa do marco zero" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+                            src="https://maps.google.com/maps?q={{ marco_latitude }},{{ marco_longitude }}&z=17&output=embed"></iframe>
+                {% else %}
+                    <p>Salve as coordenadas para visualizar o local no Google Maps.</p>
+                {% endif %}
+            </div>
+            <p class="nota-marco-zero">A localização é obtida pelo navegador. Para maior precisão, use um dispositivo com GPS e permita o acesso à localização.</p>
+        </section>
+        {% else %}
+            <p>As configurações da conta ficarão disponíveis aqui.</p>
+        {% endif %}
     </section>
 {% endblock %}

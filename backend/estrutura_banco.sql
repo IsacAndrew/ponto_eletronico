@@ -42,3 +42,17 @@ CREATE TABLE IF NOT EXISTS jornadas_usuarios (
     saida TIME NOT NULL,
     PRIMARY KEY (usuario_id, dia_semana)
 );
+
+CREATE TABLE IF NOT EXISTS configuracoes_sistema (
+    id SMALLINT PRIMARY KEY CHECK (id = 1),
+    marco_zero_latitude DOUBLE PRECISION,
+    marco_zero_longitude DOUBLE PRECISION,
+    marco_zero_endereco TEXT NOT NULL DEFAULT '',
+    raio_ponto_metros SMALLINT NOT NULL DEFAULT 100
+        CHECK (raio_ponto_metros BETWEEN 1 AND 100),
+    atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO configuracoes_sistema (id)
+VALUES (1)
+ON CONFLICT (id) DO NOTHING;
