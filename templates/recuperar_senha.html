@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#31425e">
+    <title>Recuperar senha | Ponto Eletrônico</title>
+    <link rel="stylesheet" href="/static/css/login.css">
+</head>
+<body>
+    <main class="pagina-login">
+        <section class="cartao-login" aria-labelledby="titulo-pagina">
+            <header class="cabecalho-login">
+                <h1 id="titulo-pagina">Recuperar senha</h1>
+                <p class="instrucao-login">Informe o e-mail vinculado ao seu login.</p>
+            </header>
+
+            <form class="formulario-login" action="" method="post">
+                <div class="campo-formulario">
+                    <label for="email">E-mail</label>
+                    <input id="email" name="email" type="email" autocomplete="email" required>
+                </div>
+
+                <button class="botao-entrar" type="submit">Enviar senha temporária</button>
+            </form>
+
+            <a class="link-voltar" href="/">Voltar para o login</a>
+        </section>
+    </main>
+</body>
+</html>

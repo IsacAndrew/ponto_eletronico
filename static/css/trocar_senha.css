@@ -1,0 +1,170 @@
+:root {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    color: #26332f;
+    background: #26364b;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    min-width: 320px;
+    min-height: 100vh;
+    margin: 0;
+}
+
+button,
+input {
+    font: inherit;
+}
+
+.pagina-senha {
+    display: grid;
+    min-height: 100vh;
+    padding: 24px;
+    background:
+        radial-gradient(ellipse at 14% 15%, rgb(147 197 253 / 17%), transparent 40%),
+        radial-gradient(ellipse at 90% 90%, rgb(132 159 146 / 16%), transparent 42%),
+        linear-gradient(145deg, #151d29, #31425e 62%, #405779);
+    place-items: center;
+}
+
+.cartao-senha {
+    width: min(100%, 460px);
+    padding: 38px 40px 32px;
+    border: 1px solid rgb(255 255 255 / 58%);
+    border-radius: 15px;
+    background: #f7faf8;
+    box-shadow: 0 22px 55px rgb(9 17 29 / 28%);
+}
+
+.marcador-senha {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    margin: 0 auto 14px;
+    border-radius: 13px;
+    background: #e4ebf1;
+    color: #31425e;
+    font-size: 0.83rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    place-items: center;
+}
+
+.sobretitulo-senha {
+    margin: 0 0 9px;
+    color: #52647a;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.cartao-senha h1 {
+    margin: 0;
+    color: #151d29;
+    font-size: 1.75rem;
+    font-weight: 650;
+    text-align: center;
+}
+
+.instrucao-senha {
+    margin: 11px 0 25px;
+    color: #64748b;
+    font-size: 0.94rem;
+    line-height: 1.5;
+    text-align: center;
+}
+
+.formulario-senha {
+    display: grid;
+    gap: 9px;
+}
+
+.formulario-senha label {
+    margin-top: 6px;
+    color: #334155;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.formulario-senha input {
+    width: 100%;
+    min-height: 46px;
+    padding: 10px 12px;
+    border: 1px solid #cbd5df;
+    border-radius: 8px;
+    background: #fff;
+    color: #1f2937;
+}
+
+.formulario-senha input:focus {
+    border-color: #607b9b;
+    outline: 3px solid rgb(64 87 121 / 14%);
+}
+
+.aviso-senha {
+    margin: 1px 0 3px;
+    color: #405779;
+    font-size: 0.84rem;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+.erro-senha {
+    margin: 0 0 18px;
+    color: #a33b3b;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.formulario-senha > button {
+    min-height: 47px;
+    margin-top: 12px;
+    border: 0;
+    border-radius: 8px;
+    background: #31425e;
+    color: #fff;
+    cursor: pointer;
+    font-weight: 650;
+}
+
+.formulario-senha > button:hover {
+    background: #26364b;
+}
+
+.formulario-sair {
+    margin-top: 15px;
+    text-align: center;
+}
+
+.formulario-sair button {
+    padding: 7px 10px;
+    border: 0;
+    background: transparent;
+    color: #52647a;
+    cursor: pointer;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.formulario-sair button:hover {
+    color: #26364b;
+    text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+    .pagina-senha {
+        padding: 16px;
+    }
+
+    .cartao-senha {
+        padding: 32px 24px 27px;
+    }
+}

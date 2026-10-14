@@ -1,0 +1,225 @@
+:root {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    color: #1f2937;
+    background: #31425e;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+
+    --azul-escuro: #151d29;
+    --azul-medio: #31425e;
+    --azul-claro: #405779;
+    --texto-secundario: #64748b;
+    --borda: #d7dee8;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    min-width: 320px;
+    min-height: 100vh;
+    margin: 0;
+}
+
+button,
+input {
+    font: inherit;
+}
+
+.pagina-login {
+    display: grid;
+    min-height: 100vh;
+    padding: 24px;
+    place-items: center;
+    background: linear-gradient(145deg, var(--azul-escuro), var(--azul-medio));
+}
+
+.cartao-login {
+    width: min(100%, 420px);
+    padding: 42px 40px 36px;
+    border: 1px solid rgb(255 255 255 / 55%);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 22px 55px rgb(9 17 29 / 25%);
+}
+
+.cabecalho-login {
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.identificacao-sistema {
+    margin: 0 0 22px;
+    color: var(--azul-medio);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.cabecalho-login h1 {
+    margin: 0;
+    color: var(--azul-escuro);
+    font-size: 1.85rem;
+    font-weight: 650;
+}
+
+.instrucao-login {
+    margin: 10px 0 0;
+    color: var(--texto-secundario);
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.mensagem-erro {
+    margin: -10px 0 22px;
+    color: #b42318;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.formulario-login {
+    display: grid;
+    gap: 20px;
+}
+
+.campo-formulario {
+    display: grid;
+    gap: 8px;
+}
+
+.campo-formulario label {
+    color: #263449;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.campo-formulario input {
+    width: 100%;
+    height: 46px;
+    padding: 0 13px;
+    border: 1px solid var(--borda);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--azul-escuro);
+    outline: none;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.campo-formulario input:focus {
+    border-color: var(--azul-claro);
+    box-shadow: 0 0 0 3px rgb(64 87 121 / 16%);
+}
+
+.entrada-senha {
+    position: relative;
+}
+
+.entrada-senha input {
+    padding-right: 46px;
+}
+
+.botao-visualizar-senha {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    display: grid;
+    width: 28px;
+    height: 28px;
+    padding: 4px;
+    place-items: center;
+    transform: translateY(-50%);
+    border: 0;
+    background: transparent;
+    color: var(--azul-medio);
+    cursor: pointer;
+}
+
+.icone-olho {
+    width: 19px;
+    height: 19px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.7;
+}
+
+.icone-olho-fechado,
+.botao-visualizar-senha[aria-pressed="true"] .icone-olho-aberto {
+    display: none;
+}
+
+.botao-visualizar-senha[aria-pressed="true"] .icone-olho-fechado {
+    display: block;
+}
+
+.botao-visualizar-senha:focus-visible {
+    border-radius: 3px;
+    outline: 3px solid #8298b8;
+    outline-offset: 3px;
+}
+
+.linha-recuperacao {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: -8px;
+}
+
+.linha-recuperacao a,
+.link-voltar {
+    color: var(--azul-medio);
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.linha-recuperacao a:hover,
+.link-voltar:hover {
+    color: var(--azul-escuro);
+    text-decoration: underline;
+}
+
+.botao-entrar {
+    min-height: 47px;
+    margin-top: 2px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--azul-medio);
+    color: #fff;
+    cursor: pointer;
+    font-weight: 650;
+    transition: background-color 150ms ease, transform 150ms ease;
+}
+
+.botao-entrar:hover {
+    background: var(--azul-escuro);
+}
+
+.botao-entrar:active {
+    transform: translateY(1px);
+}
+
+.botao-entrar:focus-visible,
+.linha-recuperacao a:focus-visible,
+.link-voltar:focus-visible {
+    outline: 3px solid #8298b8;
+    outline-offset: 3px;
+}
+
+.link-voltar {
+    display: inline-block;
+    margin-top: 24px;
+}
+
+@media (max-width: 480px) {
+    .pagina-login {
+        padding: 16px;
+    }
+
+    .cartao-login {
+        padding: 34px 24px 28px;
+    }
+}

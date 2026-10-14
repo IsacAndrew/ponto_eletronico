@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block titulo %}Início | Ponto Eletrônico{% endblock %}
+
+{% block estilos_pagina %}
+    <link rel="stylesheet" href="/static/css/inicio.css">
+    <script src="/static/js/inicio.js" defer></script>
+{% endblock %}
+
+{% block conteudo %}
+    <section class="cartao-pagina cartao-ponto">
+        <h1>Ponto eletrônico</h1>
+        <p class="relogio-digital" id="relogio-digital" aria-label="Horário atual">--:--:--</p>
+        <p class="ultimo-registro" id="ultimo-registro" role="status" aria-live="polite">
+            {% if ultimo_registro %}
+                Último registro: {{ ultimo_registro.horario }} / {{ ultimo_registro.tipo }}
+            {% else %}
+                Ainda sem registro para hoje.
+            {% endif %}
+        </p>
+        <button class="botao-registrar" id="botao-registrar" type="button">Registrar</button>
+    </section>
+
+    {% if tipo_conta in ["Professor", "Colaborador", "Suporte"] %}
+        <a class="atalho-suporte" href="{{ url_for('chat_suporte.exibir_chat_suporte') }}"
+           aria-label="Abrir chat com o suporte" title="Chat com suporte">
+            <svg class="icone-ajuda" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M9.4 8.8a2.8 2.8 0 1 1 4.3 2.4c-1.1.7-1.7 1.2-1.7 2.5"></path>
+                <circle cx="12" cy="17.5" r=".6"></circle>
+            </svg>
+        </a>
+    {% endif %}
+{% endblock %}

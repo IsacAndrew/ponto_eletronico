@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block titulo %}Planilha | Ponto Eletrônico{% endblock %}
+
+{% block estilos_pagina %}
+    <link rel="stylesheet" href="/static/css/planilha.css">
+{% endblock %}
+
+{% block conteudo %}
+    <section class="cartao-pagina cartao-planilha">
+        <header class="cabecalho-planilha">
+            <span class="sobrelinha-planilha">Relatórios</span>
+            <h1>Planilha</h1>
+            <p>Escolha os registros e o período que deseja consultar.</p>
+        </header>
+
+        {% if erro_planilha %}<p class="erro-planilha" role="alert">{{ erro_planilha }}</p>{% endif %}
+
+        <form class="filtros-planilha" method="post" action="{{ url_for('planilha.exibir_planilha') }}">
+            <div class="campo-planilha campo-colaborador">
+                <label for="colaborador">Colaborador ou professor</label>
+                <select id="colaborador" name="usuario_id">
+                    <option value="">Todos os colaboradores e professores</option>
+                    {% for colaborador in colaboradores %}
+                        <option value="{{ colaborador[0] }}" {% if campos.usuario_id|string == colaborador[0]|string %}selected{% endif %}>
+                            {{ colaborador[1] }} · {{ colaborador[2] }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="campo-planilha campo-periodo">
+                <label for="periodo">Período</label>
+                <select id="periodo" name="periodo">
+                    <option value="dia" {% if campos.periodo == 'dia' %}selected{% endif %}>Dia específico</option>
+                    <option value="semana" {% if campos.periodo == 'semana' %}selected{% endif %}>Semana</option>
+                    <option value="mes" {% if campos.periodo == 'mes' %}selected{% endif %}>Mês</option>
+                    <option value="intervalo" {% if campos.periodo == 'intervalo' %}selected{% endif %}>De uma data a outra</option>
+                </select>
+                <small>Preencha somente as datas correspondentes ao período escolhido.</small>
+            </div>
+
+            <div class="campo-planilha campo-data-referencia">
+                <label for="data-referencia">Data do dia ou da semana</label>
+                <input id="data-referencia" name="data_referencia" type="date" value="{{ campos.data_referencia }}">
+            </div>
+
+            <div class="campo-planilha campo-mes">
+                <label for="mes">Mês</label>
+                <input id="mes" name="mes" type="month" value="{{ campos.mes }}">
+            </div>
+
+            <div class="campo-planilha campo-data-inicio">
+                <label for="data-inicio">Data inicial</label>
+                <input id="data-inicio" name="data_inicio" type="date" value="{{ campos.data_inicio }}">
+            </div>
+
+            <div class="campo-planilha campo-data-fim">
+                <label for="data-fim">Data final</label>
+                <input id="data-fim" name="data_fim" type="date" value="{{ campos.data_fim }}">
+            </div>
+
+            <div class="campo-planilha campo-tipo">
+                <label for="tipo-batida">Tipo de ponto</label>
+                <select id="tipo-batida" name="tipo_batida">
+                    <option value="Todas" {% if campos.tipo_batida == 'Todas' %}selected{% endif %}>Todas as batidas</option>
+                    <option value="Entrada" {% if campos.tipo_batida == 'Entrada' %}selected{% endif %}>Entrada</option>
+                    <option value="Intervalo" {% if campos.tipo_batida == 'Intervalo' %}selected{% endif %}>Intervalo</option>
+                    <option value="Retorno intervalo" {% if campos.tipo_batida == 'Retorno intervalo' %}selected{% endif %}>Retorno intervalo</option>
+                    <option value="Saída" {% if campos.tipo_batida == 'Saída' %}selected{% endif %}>Saída</option>
+                </select>
+            </div>
+
+            <div class="rodape-filtros-planilha">
+                <p>O resumo de horas considera todas as batidas, mesmo quando a tabela é filtrada por um tipo específico.</p>
+                <button class="botao-baixar-planilha" type="submit">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M12 3v12m0 0 4-4m-4 4-4-4"></path>
+                        <path d="M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"></path>
+                    </svg>
+                    Baixar a planilha
+                </button>
+            </div>
+        </form>
+    </section>
+{% endblock %}

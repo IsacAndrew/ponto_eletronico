@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block titulo %}Usuários | Ponto Eletrônico{% endblock %}
+
+{% block estilos_pagina %}
+    <link rel="stylesheet" href="/static/css/usuarios.css">
+{% endblock %}
+
+{% block conteudo %}
+    <section class="cartao-pagina cartao-usuarios">
+        <h1>Usuários</h1>
+        {% if resultado %}<p class="aviso-resultado" role="status">{{ resultado }}</p>{% endif %}
+
+        <div class="ferramentas-usuarios">
+            <form class="busca-nome" method="get" action="{{ url_for('usuarios.exibir_usuarios') }}">
+                <input type="hidden" name="filtro" value="nome">
+                <label class="campo-busca">
+                    <span class="sr-only">Filtrar por nome</span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <circle cx="10.8" cy="10.8" r="6.8"></circle>
+                        <path d="m16 16 5 5"></path>
+                    </svg>
+                    <input type="search" name="busca" value="{{ busca if filtro_atual == 'nome' else '' }}" placeholder="Buscar pelo nome">
+                </label>
+                <button class="botao-busca" type="submit">Buscar</button>
+            </form>
+
+            <details class="filtros-adicionais" {% if filtro_atual != 'nome' %}open{% endif %}>
+                <summary>+ Filtros</summary>
+                <form class="janela-filtros" method="get" action="{{ url_for('usuarios.exibir_usuarios') }}">
+                    <label for="campo-filtro">Filtrar por</label>
+                    <select id="campo-filtro" name="filtro">
+                        <option value="nome" {% if filtro_atual == 'nome' %}selected{% endif %}>Nome</option>
+                        <option value="email" {% if filtro_atual == 'email' %}selected{% endif %}>Email</option>
+                        <option value="telefone" {% if filtro_atual == 'telefone' %}selected{% endif %}>Telefone</option>
+                        <option value="permissao" {% if filtro_atual == 'permissao' %}selected{% endif %}>Permissão</option>
+                        <option value="acesso" {% if filtro_atual == 'acesso' %}selected{% endif %}>Acesso ativo</option>
+                    </select>
+
+                    <label for="valor-filtro">Valor</label>
+                    <input id="valor-filtro" type="search" name="busca" value="{{ busca }}"
+                           placeholder="Ex.: email, Professor, Nunca acessou" list="opcoes-filtro">
+                    <datalist id="opcoes-filtro">
+                        {% for tipo in tipos_conta %}<option value="{{ tipo }}">{% endfor %}
+                        <option value="Já acessou">
+                        <option value="Nunca acessou">
+                    </datalist>
+                    <div class="acoes-filtro">
+                        <a href="{{ url_for('usuarios.exibir_usuarios') }}">Limpar</a>
+                        <button class="botao-busca" type="submit">Aplicar filtro</button>
+                    </div>
+                </form>
+            </details>
+            <a class="botao-adicionar" href="{{ url_for('usuarios.adicionar_usuario', filtro=filtro_atual, busca=busca) }}">
+                <span aria-hidden="true">+</span> Adicionar usuário
+            </a>
+        </div>
+
+        <div class="tabela-usuarios-conteiner">
+            <table class="tabela-usuarios">
+                <thead>
+                    <tr>
+                        <th scope="col">Nome</th>
+                        <th scope="col">Email</th>
+                        <th scope="col">Telefone</th>
+                        <th scope="col">Permissão</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Último acesso</th>
+                        <th scope="col"><span class="sr-only">Editar</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for usuario in usuarios %}
+                        <tr>
+                            <td data-label="Nome">{{ usuario.nome_completo }}</td>
+                            <td data-label="Email">{{ usuario.email }}</td>
+                            <td data-label="Telefone">{{ usuario.telefone }}</td>
+                            <td data-label="Permissão"><span class="etiqueta-permissao">{{ usuario.tipo_conta }}</span></td>
+                            <td data-label="Status">
+                                <span class="estado-usuario {% if usuario.ativo %}estado-ativo{% else %}estado-inativo{% endif %}">
+                                    {{ "Ativo" if usuario.ativo else "Inativo" }}
+                                </span>
+                            </td>
+                            <td data-label="Último acesso">{{ usuario.ultimo_acesso_formatado or "Nunca acessou" }}</td>
+                            <td class="celula-editar" data-label="Ação">
+                                <a class="botao-editar" href="{{ url_for('usuarios.editar_usuario', usuario_id=usuario.id, filtro=filtro_atual, busca=busca) }}"
+                                   aria-label="Editar {{ usuario.nome_completo }}" title="Editar usuário">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                        <path d="m14 5 5 5M4 20l4.2-.9L19.2 8a2.1 2.1 0 0 0-3-3L5.2 16.1 4 20z"></path>
+                                    </svg>
+                                </a>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td class="sem-usuarios" colspan="7">Nenhum usuário encontrado para este filtro.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    {% if usuario_edicao %}
+        <dialog class="janela-edicao" open aria-labelledby="titulo-edicao" aria-modal="true">
+            <section class="cartao-edicao">
+                <header class="cabecalho-edicao">
+                    <div>
+                        <span class="sobretitulo-edicao">Cadastro de usuário</span>
+                        <h2 id="titulo-edicao">{{ "Excluir acesso" if confirmar_exclusao else "Editar usuário" }}</h2>
+                    </div>
+                    <a class="fechar-edicao" href="{{ url_for('usuarios.exibir_usuarios', filtro=filtro_atual, busca=busca) }}" aria-label="Fechar edição">&times;</a>
+                </header>
+
+                {% if confirmar_exclusao %}
+                    <p class="texto-confirmacao-exclusao">
+                        Confirma a exclusão do acesso de <strong>{{ usuario_edicao.nome_completo }}</strong>?
+                        Os registros de ponto serão mantidos no banco.
+                    </p>
+                    <form class="acoes-confirmacao" method="post" action="{{ url_for('usuarios.excluir_usuario', usuario_id=usuario_edicao.id, filtro=filtro_atual, busca=busca) }}">
+                        <a class="botao-cancelar" href="{{ url_for('usuarios.editar_usuario', usuario_id=usuario_edicao.id, filtro=filtro_atual, busca=busca) }}">Cancelar</a>
+                        <button class="botao-excluir" type="submit">Excluir acesso</button>
+                    </form>
+                {% else %}
+                <nav class="abas-edicao" aria-label="Seções do usuário">
+                    <a class="{% if aba_edicao == 'perfil' %}aba-ativa{% endif %}" href="{{ url_for('usuarios.editar_usuario', usuario_id=usuario_edicao.id, filtro=filtro_atual, busca=busca, aba='perfil') }}">Dados do usuário</a>
+                    <a class="{% if aba_edicao == 'jornada' %}aba-ativa{% endif %}" href="{{ url_for('usuarios.editar_usuario', usuario_id=usuario_edicao.id, filtro=filtro_atual, busca=busca, aba='jornada') }}">Jornada semanal</a>
+                </nav>
+
+                {% if aba_edicao == 'jornada' %}
+                    <p class="explicacao-jornada">Defina os dias de trabalho e os horários esperados para cada batida.</p>
+                    {% if erro_jornada %}<p class="erro-edicao" role="alert">{{ erro_jornada }}</p>{% endif %}
+                    <form class="formulario-edicao formulario-jornada" method="post" action="{{ url_for('usuarios.salvar_jornada', usuario_id=usuario_edicao.id, filtro=filtro_atual, busca=busca) }}">
+                        <label for="dia-jornada">Dia da semana</label>
+                        <select id="dia-jornada" name="dia_semana" required>
+                            {% for dia in dias_semana %}
+                                <option value="{{ loop.index0 }}" {% if jornada_edicao.dia_semana == loop.index0 %}selected{% endif %}>{{ dia }}</option>
+                            {% endfor %}
+                        </select>
+                        <label for="hora-entrada">Entrada</label>
+                        <input id="hora-entrada" name="entrada" type="time" value="{{ jornada_edicao.entrada if jornada_edicao.entrada is string else jornada_edicao.entrada.strftime('%H:%M') if jornada_edicao.entrada else '' }}" required>
+                        <label for="hora-intervalo">Intervalo</label>
+                        <input id="hora-intervalo" name="intervalo" type="time" value="{{ jornada_edicao.intervalo if jornada_edicao.intervalo is string else jornada_edicao.intervalo.strftime('%H:%M') if jornada_edicao.intervalo else '' }}" required>
+                        <label for="hora-retorno">Retorno do intervalo</label>
+                        <input id="hora-retorno" name="retorno_intervalo" type="time" value="{{ jornada_edicao.retorno_intervalo if jornada_edicao.retorno_intervalo is string else jornada_edicao.retorno_intervalo.strftime('%H:%M') if jornada_edicao.retorno_intervalo else '' }}" required>
+                        <label for="hora-saida">Saída</label>
+                        <input id="hora-saida" name="saida" type="time" value="{{ jornada_edicao.saida if jornada_edicao.saida is string else jornada_edicao.saida.strftime('%H:%M') if jornada_edicao.saida else '' }}" required>
+                        <footer class="acoes-edicao">
+                            <a class="botao-cancelar" href="{{ url_for('usuarios.exibir_usuarios', filtro=filtro_atual, busca=busca) }}">Cancelar</a>
+                            <button class="botao-salvar" type="submit">Salvar jornada</button>
+                        </footer>
+                    </form>
+
+                    <div class="lista-jornadas">
+                        <h3>Dias cadastrados</h3>
+                        {% for jornada in jornadas %}
+                            <div class="linha-jornada">
+                                <a href="{{ url_for('usuarios.editar_usuario', usuario_id=usuario_edicao.id, filtro=filtro_atual, busca=busca, aba='jornada', dia=jornada.dia_semana) }}">
+                                    <strong>{{ jornada.dia_nome }}</strong>
+                                    <span>{{ jornada.entrada.strftime('%H:%M') }} · {{ jornada.intervalo.strftime('%H:%M') }} · {{ jornada.retorno_intervalo.strftime('%H:%M') }} · {{ jornada.saida.strftime('%H:%M') }}</span>
+                                </a>
+                                <form method="post" action="{{ url_for('usuarios.excluir_jornada', usuario_id=usuario_edicao.id, dia=jornada.dia_semana, filtro=filtro_atual, busca=busca) }}">
+                                    <button type="submit" aria-label="Remover jornada de {{ jornada.dia_nome }}">Remover</button>
+                                </form>
+                            </div>
+                        {% else %}
+                            <p class="sem-jornadas">Ainda não há dias de trabalho cadastrados.</p>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                {% if erro_edicao %}<p class="erro-edicao" role="alert">{{ erro_edicao }}</p>{% endif %}
+
+                <form id="formulario-edicao" class="formulario-edicao" method="post" action="{{ url_for('usuarios.editar_usuario', usuario_id=usuario_edicao.id, filtro=filtro_atual, busca=busca) }}">
+                    <label for="nome-completo">Nome completo</label>
+                    <input id="nome-completo" name="nome_completo" type="text" value="{{ usuario_edicao.nome_completo }}" autocomplete="name" required autofocus>
+
+                    <label for="login-usuario">Login</label>
+                    <input id="login-usuario" name="login" type="text" value="{{ usuario_edicao.login }}" autocomplete="username" required>
+
+                    <label for="email-usuario">Email</label>
+                    <input id="email-usuario" name="email" type="email" value="{{ usuario_edicao.email }}" autocomplete="email" required>
+
+                    <label for="telefone-usuario">Telefone</label>
+                    <input id="telefone-usuario" name="telefone" type="tel" value="{{ usuario_edicao.telefone }}" placeholder="(xx) xxxxx-xxxx" autocomplete="tel" required>
+
+                    <label for="permissao-usuario">Permissão</label>
+                    <select id="permissao-usuario" name="tipo_conta" required>
+                        {% for tipo in tipos_conta %}
+                            <option value="{{ tipo }}" {% if usuario_edicao.tipo_conta == tipo %}selected{% endif %}>{{ tipo }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <label class="campo-ativo" for="usuario-ativo">
+                        <input id="usuario-ativo" name="ativo" type="checkbox" {% if usuario_edicao.ativo == true or usuario_edicao.ativo == 'on' %}checked{% endif %}>
+                        <span>Acesso ativo</span>
+                    </label>
+                </form>
+
+                <footer class="acoes-edicao">
+                    <a class="botao-cancelar" href="{{ url_for('usuarios.exibir_usuarios', filtro=filtro_atual, busca=busca) }}">Cancelar</a>
+                    <a class="botao-excluir-link" href="{{ url_for('usuarios.excluir_usuario', usuario_id=usuario_edicao.id, filtro=filtro_atual, busca=busca) }}">Excluir acesso</a>
+                    <form method="post" action="{{ url_for('usuarios.redefinir_senha', usuario_id=usuario_edicao.id, filtro=filtro_atual, busca=busca) }}">
+                        <button class="botao-redefinir" type="submit">Redefinir senha</button>
+                    </form>
+                    <button class="botao-salvar" type="submit" form="formulario-edicao">Salvar alterações</button>
+                </footer>
+                {% endif %}
+                {% endif %}
+            </section>
+        </dialog>
+    {% endif %}
+
+    {% if usuario_novo %}
+        <dialog class="janela-edicao" open aria-labelledby="titulo-novo-usuario" aria-modal="true">
+            <section class="cartao-edicao">
+                <header class="cabecalho-edicao">
+                    <div>
+                        <span class="sobretitulo-edicao">Cadastro de usuário</span>
+                        <h2 id="titulo-novo-usuario">Adicionar usuário</h2>
+                    </div>
+                    <a class="fechar-edicao" href="{{ url_for('usuarios.exibir_usuarios', filtro=filtro_atual, busca=busca) }}" aria-label="Fechar cadastro">&times;</a>
+                </header>
+
+                <p class="aviso-senha-temporaria">A senha inicial será <strong>102030</strong>. O usuário deverá criar uma nova senha no primeiro acesso.</p>
+                {% if erro_novo %}<p class="erro-edicao" role="alert">{{ erro_novo }}</p>{% endif %}
+
+                <form class="formulario-edicao" method="post" action="{{ url_for('usuarios.adicionar_usuario', filtro=filtro_atual, busca=busca) }}">
+                    <label for="novo-nome">Nome completo</label>
+                    <input id="novo-nome" name="nome_completo" type="text" value="{{ usuario_novo.nome_completo }}" autocomplete="name" required autofocus>
+
+                    <label for="novo-login">Login</label>
+                    <input id="novo-login" name="login" type="text" value="{{ usuario_novo.login }}" autocomplete="username" required>
+
+                    <label for="novo-email">Email</label>
+                    <input id="novo-email" name="email" type="email" value="{{ usuario_novo.email }}" autocomplete="email" required>
+
+                    <label for="novo-telefone">Telefone</label>
+                    <input id="novo-telefone" name="telefone" type="tel" value="{{ usuario_novo.telefone }}" placeholder="(xx) xxxxx-xxxx" autocomplete="tel" required>
+
+                    <label for="nova-permissao">Permissão</label>
+                    <select id="nova-permissao" name="tipo_conta" required>
+                        {% for tipo in tipos_conta %}
+                            <option value="{{ tipo }}" {% if usuario_novo.tipo_conta == tipo %}selected{% endif %}>{{ tipo }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <footer class="acoes-edicao">
+                        <a class="botao-cancelar" href="{{ url_for('usuarios.exibir_usuarios', filtro=filtro_atual, busca=busca) }}">Cancelar</a>
+                        <button class="botao-salvar" type="submit">Adicionar usuário</button>
+                    </footer>
+                </form>
+            </section>
+        </dialog>
+    {% endif %}
+{% endblock %}

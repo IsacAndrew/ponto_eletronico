@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#31425e">
+    <title>Entrar | Ponto Eletrônico</title>
+    <link rel="stylesheet" href="/static/css/login.css">
+</head>
+<body>
+    <main class="pagina-login">
+        <section class="cartao-login" aria-labelledby="titulo-pagina">
+            <header class="cabecalho-login">
+                <h1 id="titulo-pagina">Bem-vindo</h1>
+                <p class="instrucao-login">Entre com seus dados para continuar.</p>
+            </header>
+
+            {% if mensagem_erro %}
+                <p class="mensagem-erro" role="alert">{{ mensagem_erro }}</p>
+            {% endif %}
+
+            <form class="formulario-login" action="" method="post">
+                <div class="campo-formulario">
+                    <label for="login">Login</label>
+                    <input id="login" name="login" type="text" autocomplete="username" required>
+                </div>
+
+                <div class="campo-formulario">
+                    <label for="senha">Senha</label>
+                    <div class="entrada-senha">
+                        <input id="senha" name="senha" type="password" autocomplete="current-password" required>
+                        <button
+                            class="botao-visualizar-senha"
+                            id="alternar-visibilidade-senha"
+                            type="button"
+                            aria-label="Mostrar senha"
+                            aria-pressed="false"
+                        >
+                            <svg class="icone-olho icone-olho-aberto" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M2.5 12s3.3-7 9.5-7 9.5 7 9.5 7-3.3 7-9.5 7-9.5-7-9.5-7Z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                            <svg class="icone-olho icone-olho-fechado" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M3 3l18 18"></path>
+                                <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"></path>
+                                <path d="M9.9 5.2A10.8 10.8 0 0 1 12 5c6.2 0 9.5 7 9.5 7a14.7 14.7 0 0 1-4.2 4.9"></path>
+                                <path d="M6.6 6.6C3.9 8.4 2.5 12 2.5 12s3.3 7 9.5 7a10.7 10.7 0 0 0 3.1-.5"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="linha-recuperacao">
+                    <a href="/recuperar-senha">Esqueci minha senha</a>
+                </div>
+
+                <button class="botao-entrar" type="submit">Entrar</button>
+            </form>
+        </section>
+    </main>
+    <script src="/static/js/login.js" defer></script>
+</body>
+</html>

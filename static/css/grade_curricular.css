@@ -1,0 +1,63 @@
+.cartao-manutencao {
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    width: min(100%, 560px);
+    min-height: 320px;
+    overflow: hidden;
+    border: 1px solid #d7dee8;
+    border-radius: 16px;
+    background: #f7faf8;
+    box-shadow: 0 18px 40px rgb(21 29 41 / 14%);
+    place-items: center;
+}
+
+.cartao-manutencao::before,
+.cartao-manutencao::after {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 0;
+    width: 145%;
+    height: 42px;
+    background: repeating-linear-gradient(
+        90deg,
+        #facc15 0 18px,
+        #151d29 18px 36px
+    );
+    content: "";
+}
+
+.cartao-manutencao::before {
+    transform: translate(-50%, -50%) rotate(35deg);
+}
+
+.cartao-manutencao::after {
+    transform: translate(-50%, -50%) rotate(-35deg);
+}
+
+.texto-manutencao {
+    z-index: 1;
+    margin: 0;
+    padding: 13px 22px;
+    border: 2px solid #151d29;
+    border-radius: 10px;
+    background: #f7faf8;
+    box-shadow: 0 5px 16px rgb(21 29 41 / 22%);
+    color: #151d29;
+    font-size: clamp(1.25rem, 4vw, 1.75rem);
+    font-weight: 750;
+    transform: rotate(-2deg);
+}
+
+@media (max-width: 640px) {
+    .cartao-manutencao {
+        min-height: 280px;
+    }
+
+    .cartao-manutencao::before,
+    .cartao-manutencao::after {
+        width: 180%;
+        height: 36px;
+    }
+}
