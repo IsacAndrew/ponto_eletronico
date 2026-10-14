@@ -8,6 +8,26 @@
     text-align: center;
 }
 
+.cartao-perfil-conta {
+    margin-bottom: 18px;
+    padding: clamp(16px, 3vw, 22px);
+    border: 1px solid #dbe3ec;
+    border-radius: 13px;
+    background: linear-gradient(145deg, #fff, #f4f7fb);
+    box-shadow: 0 12px 28px rgb(37 55 79 / 7%);
+}
+
+.cartao-perfil-conta h2 { margin: 0 0 16px; color: #26364b; font-size: 1.08rem; }
+.formulario-perfil-conta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
+.formulario-perfil-conta label { display: grid; gap: 6px; color: #35465d; font-size: .88rem; font-weight: 600; }
+.formulario-perfil-conta input { min-width: 0; min-height: 42px; padding: 9px 11px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #243449; font: inherit; }
+.formulario-perfil-conta button { min-height: 42px; align-self: end; padding: 9px 15px; border: 0; border-radius: 8px; background: #31445c; color: white; font: inherit; font-weight: 650; cursor: pointer; }
+.mensagem-perfil { grid-column: 1 / -1; margin: 0 0 12px; color: #28603c; }
+
+@media (max-width: 600px) {
+    .formulario-perfil-conta { grid-template-columns: 1fr; }
+}
+
 .cartao-marco-zero {
     overflow: hidden;
     border: 1px solid #dbe3ec;

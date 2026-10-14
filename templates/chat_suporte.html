@@ -4,11 +4,40 @@
 
 {% block estilos_pagina %}
     <link rel="stylesheet" href="/static/css/chat_suporte.css">
+    <script src="/static/js/chat_suporte.js" defer></script>
 {% endblock %}
 
 {% block conteudo %}
-    <section class="cartao-pagina cartao-chat-suporte">
+    <section class="cartao-pagina cartao-chat-suporte{% if suporte_chat %} chat-visao-suporte{% endif %}">
         <h1>Chat com suporte</h1>
-        <p>O canal de atendimento aos professores ficará disponível aqui.</p>
+        {% if suporte_chat %}
+            <div class="painel-conversas">
+                <nav class="lista-conversas" aria-label="Conversas abertas">
+                    <h2>Conversas abertas</h2>
+                    {% for conversa in conversas %}
+                        <a href="{{ url_for('chat_suporte.exibir_chat_suporte', conversa=conversa[0]) }}" class="item-conversa{% if conversa_id == conversa[0] %} conversa-selecionada{% endif %}">
+                            <strong>{{ conversa[1] }}</strong>
+                            <span>{{ conversa[3] }} mensagens</span>
+                        </a>
+                    {% else %}
+                        <p class="sem-conversas">Nenhuma conversa aberta.</p>
+                    {% endfor %}
+                </nav>
+                <section class="area-chat" data-conversa="{{ conversa_id or '' }}" data-suporte="true">
+                    {% if conversa_id %}
+                        <header class="cabecalho-chat"><h2>Atendimento</h2><button type="button" class="botao-encerrar-chat" data-encerrar>Encerrar conversa</button></header>
+                        <div class="mensagens-chat" data-mensagens aria-live="polite"></div>
+                        <form class="formulario-mensagem" data-form-mensagem><textarea name="mensagem" maxlength="2000" placeholder="Digite sua mensagem" required></textarea><button type="submit">Enviar</button></form>
+                        <p class="status-chat" data-status role="status"></p>
+                    {% else %}<div class="chat-vazio">Selecione uma conversa para responder.</div>{% endif %}
+                </section>
+            </div>
+        {% else %}
+            <section class="area-chat chat-usuario" data-conversa="{{ conversa_id }}" data-suporte="false">
+                <div class="mensagens-chat" data-mensagens aria-live="polite"></div>
+                <form class="formulario-mensagem" data-form-mensagem><textarea name="mensagem" maxlength="2000" placeholder="Digite sua mensagem" required></textarea><button type="submit">Enviar</button></form>
+                <p class="status-chat" data-status role="status">Nossa equipe responderá por aqui.</p>
+            </section>
+        {% endif %}
     </section>
 {% endblock %}

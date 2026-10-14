@@ -12,6 +12,25 @@
 {% block conteudo %}
     <section class="cartao-pagina cartao-configuracoes">
         <h1>Configurações</h1>
+        <section class="cartao-perfil-conta" aria-labelledby="titulo-perfil-conta">
+            <h2 id="titulo-perfil-conta">Meus dados</h2>
+            {% set mensagens_perfil = {
+                'salvo': 'Dados atualizados com sucesso.',
+                'nome_invalido': 'Informe seu nome completo.',
+                'login_invalido': 'Informe um login válido.',
+                'email_invalido': 'Informe um email válido.',
+                'telefone_invalido': 'Use o formato (xx) xxxxx-xxxx.',
+                'duplicado': 'Esse login ou email já está sendo usado por outra conta.'
+            } %}
+            {% if mensagem_perfil in mensagens_perfil %}<p class="mensagem-perfil">{{ mensagens_perfil[mensagem_perfil] }}</p>{% endif %}
+            <form class="formulario-perfil-conta" method="post" action="{{ url_for('configuracoes.salvar_perfil') }}">
+                <label>Nome completo<input name="nome_completo" value="{{ perfil[0] }}" required maxlength="200" autocomplete="name"></label>
+                <label>Login<input name="login" value="{{ perfil[1] }}" required maxlength="120" autocomplete="username"></label>
+                <label>Email<input name="email" type="email" value="{{ perfil[2] }}" required autocomplete="email"></label>
+                <label>Telefone<input name="telefone" value="{{ perfil[3] }}" required placeholder="(xx) xxxxx-xxxx" inputmode="tel" pattern="\(\d{2}\) \d{5}-\d{4}"></label>
+                <button type="submit">Salvar dados</button>
+            </form>
+        </section>
         {% if conta_suporte and not modo_visualizacao %}
             <section class="cartao-marco-zero" aria-labelledby="titulo-marco-zero">
                 <button class="botao-abrir-marco-zero" id="abrir-marco-zero" type="button" aria-haspopup="dialog">

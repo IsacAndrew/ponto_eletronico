@@ -26,7 +26,6 @@
 
         <section class="painel-limpeza-db" aria-labelledby="titulo-limpeza-db">
             <h2 id="titulo-limpeza-db">Limpar dados do sistema</h2>
-            <p>A ação remove usuários, registros de ponto, jornadas e configurações. As tabelas permanecem, mas não haverá contas para entrar até que um novo acesso seja criado.</p>
             {% if mensagem_erro == 'senha' %}<p class="erro-db" role="alert">A senha do Suporte está incorreta.</p>{% endif %}
             {% if mensagem_erro == 'confirmacao' %}<p class="erro-db" role="alert">Digite APAGAR TUDO para confirmar.</p>{% endif %}
             <form method="post" action="{{ url_for('db.apagar_dados_sistema') }}">

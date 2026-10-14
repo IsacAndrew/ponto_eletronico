@@ -56,3 +56,22 @@ CREATE TABLE IF NOT EXISTS configuracoes_sistema (
 INSERT INTO configuracoes_sistema (id)
 VALUES (1)
 ON CONFLICT (id) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS conversas_suporte (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    usuario_id BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    usuario_nome TEXT NOT NULL,
+    iniciada_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS conversas_suporte_usuario_aberto_idx
+ON conversas_suporte (usuario_id);
+
+CREATE TABLE IF NOT EXISTS mensagens_suporte (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    conversa_id BIGINT NOT NULL REFERENCES conversas_suporte(id) ON DELETE CASCADE,
+    remetente_id BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    remetente_tipo TEXT NOT NULL CHECK (remetente_tipo IN ('Suporte', 'Usuario')),
+    mensagem TEXT NOT NULL CHECK (char_length(mensagem) BETWEEN 1 AND 2000),
+    enviada_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
