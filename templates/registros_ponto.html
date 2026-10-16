@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block titulo %}Registros de Ponto | Ponto Eletrônico{% endblock %}
+
+{% block estilos_pagina %}
+    <link rel="stylesheet" href="/static/css/registros_ponto.css">
+    <script src="/static/js/registros_ponto.js" defer></script>
+{% endblock %}
+
+{% block conteudo %}
+    <dialog class="janela-registros-ponto" id="janela-registros-ponto" aria-labelledby="titulo-registros-ponto">
+        <section class="conteudo-registros-ponto">
+            <header class="cabecalho-registros-ponto">
+                <div>
+                    <span class="sobrelinha-registros-ponto">Área exclusiva do Suporte</span>
+                    <h1 id="titulo-registros-ponto">Registros de Ponto</h1>
+                </div>
+                <a class="fechar-registros-ponto" href="{{ url_for('configuracoes.exibir_configuracoes') }}" aria-label="Voltar às configurações">×</a>
+            </header>
+
+            {% if resultado_registros == 'salvo' %}<p class="aviso-registros sucesso" role="status">Batida atualizada.</p>{% endif %}
+            {% if resultado_registros == 'excluido' %}<p class="aviso-registros sucesso" role="status">Batida excluída.</p>{% endif %}
+            {% if resultado_registros == 'duplicado' %}<p class="aviso-registros erro" role="alert">Já existe uma batida desse tipo para essa pessoa nessa data.</p>{% endif %}
+            {% if resultado_registros == 'horario_invalido' %}<p class="aviso-registros erro" role="alert">Informe data e horário válidos.</p>{% endif %}
+            {% if resultado_registros == 'tipo_invalido' %}<p class="aviso-registros erro" role="alert">Selecione um tipo de batida válido.</p>{% endif %}
+            {% if resultado_registros == 'nao_encontrado' %}<p class="aviso-registros erro" role="alert">O registro não foi encontrado.</p>{% endif %}
+            {% if erro_registros %}<p class="aviso-registros erro" role="alert">{{ erro_registros }}</p>{% endif %}
+
+            <form class="filtros-registros-ponto" method="get" action="{{ url_for('configuracoes.exibir_registros_ponto') }}">
+                <label>Nome<input name="nome" value="{{ filtros_registros.nome }}" placeholder="Nome do professor"></label>
+                <label>Data<input name="data" type="date" value="{{ filtros_registros.data }}"></label>
+                <label>Login<input name="login" value="{{ filtros_registros.login }}" placeholder="Login do usuário"></label>
+                <label>Email<input name="email" type="email" value="{{ filtros_registros.email }}" placeholder="Email do usuário"></label>
+                <div class="acoes-filtro-registros">
+                    <a href="{{ url_for('configuracoes.exibir_registros_ponto') }}">Limpar</a>
+                    <button type="submit">Filtrar</button>
+                </div>
+            </form>
+
+            <p class="total-registros-ponto">{{ registros_ponto|length }} registro(s){% if registros_ponto|length == 500 %} — exibindo até 500 resultados{% endif %}</p>
+            <div class="tabela-registros-ponto">
+                <table>
+                    <thead><tr><th>Professor</th><th>Login</th><th>Email</th><th>Tipo</th><th>Data e horário</th><th>Ações</th></tr></thead>
+                    <tbody>
+                        {% for registro in registros_ponto %}
+                            <tr>
+                                <td data-label="Professor">
+                                    <form id="editar-registro-{{ registro[0] }}" method="post" action="{{ url_for('configuracoes.editar_registro_ponto', registro_id=registro[0]) }}">
+                                        {% for campo, valor in filtros_registros.items() %}<input type="hidden" name="{{ campo }}" value="{{ valor }}">{% endfor %}
+                                    </form>
+                                    <strong>{{ registro[1] }}</strong>
+                                </td>
+                                <td data-label="Login">{{ registro[2] or '—' }}</td>
+                                <td data-label="Email">{{ registro[3] or '—' }}</td>
+                                <td data-label="Tipo">
+                                    <select form="editar-registro-{{ registro[0] }}" name="tipo_batida" aria-label="Tipo da batida de {{ registro[1] }}">
+                                        {% for tipo in tipos_batida %}<option value="{{ tipo }}" {% if registro[4] == tipo %}selected{% endif %}>{{ tipo }}</option>{% endfor %}
+                                    </select>
+                                </td>
+                                <td data-label="Data e horário"><input form="editar-registro-{{ registro[0] }}" name="registrado_em" type="datetime-local" step="60" value="{{ registro[5] }}" required aria-label="Data e horário da batida de {{ registro[1] }}"></td>
+                                <td class="acoes-registro" data-label="Ações">
+                                    <button class="botao-salvar-registro" type="submit" form="editar-registro-{{ registro[0] }}">Salvar</button>
+                                    <form method="post" action="{{ url_for('configuracoes.excluir_registro_ponto', registro_id=registro[0]) }}" onsubmit="return window.confirm('Excluir esta batida de ponto?');">
+                                        {% for campo, valor in filtros_registros.items() %}<input type="hidden" name="{{ campo }}" value="{{ valor }}">{% endfor %}
+                                        <button class="botao-excluir-registro" type="submit">Excluir</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr><td class="sem-registros-ponto" colspan="6">Nenhum registro encontrado para os filtros informados.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </dialog>
+{% endblock %}

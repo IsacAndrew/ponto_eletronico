@@ -1,12 +1,56 @@
 import re
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 
 from flask import Blueprint, g, jsonify, redirect, request, session, url_for
+from psycopg.errors import UniqueViolation
 
 from .banco_dados import criar_conexao
 from .localizacao import garantir_tabela_marco_zero, obter_marco_zero
 from .permissoes import exigir_tipos_conta, renderizar_pagina
 
 rota_configuracoes = Blueprint("configuracoes", __name__)
+FUSO_HORARIO = ZoneInfo("America/Sao_Paulo")
+TIPOS_BATIDA = ("Entrada", "Intervalo", "Retorno intervalo", "Saída")
+
+
+def obter_filtros_registros(fonte):
+    return {
+        "nome": fonte.get("nome", "").strip()[:120],
+        "data": fonte.get("data", "").strip(),
+        "login": fonte.get("login", "").strip()[:120],
+        "email": fonte.get("email", "").strip()[:200],
+    }
+
+
+def buscar_registros_ponto(filtros):
+    consulta = """
+        SELECT registro.id,
+               COALESCE(registro.usuario_nome, usuario.nome_completo, 'Acesso removido'),
+               COALESCE(usuario.login, ''), COALESCE(usuario.email, ''),
+               registro.tipo_batida,
+               TO_CHAR(registro.registrado_em AT TIME ZONE 'America/Sao_Paulo',
+                       'YYYY-MM-DD\"T\"HH24:MI')
+        FROM registros_ponto AS registro
+        LEFT JOIN usuarios AS usuario ON usuario.id = registro.usuario_id
+        WHERE TRUE
+    """
+    parametros = []
+    if filtros["nome"]:
+        consulta += " AND COALESCE(registro.usuario_nome, usuario.nome_completo, '') ILIKE %s"
+        parametros.append(f"%{filtros['nome']}%")
+    if filtros["data"]:
+        consulta += " AND registro.data_ponto = %s"
+        parametros.append(date.fromisoformat(filtros["data"]))
+    if filtros["login"]:
+        consulta += " AND usuario.login ILIKE %s"
+        parametros.append(f"%{filtros['login']}%")
+    if filtros["email"]:
+        consulta += " AND usuario.email ILIKE %s"
+        parametros.append(f"%{filtros['email']}%")
+    consulta += " ORDER BY registro.registrado_em DESC, registro.id DESC LIMIT 500"
+    with criar_conexao() as conexao:
+        return conexao.execute(consulta, parametros).fetchall()
 
 
 @rota_configuracoes.route("/configuracoes")
@@ -108,3 +152,77 @@ def salvar_marco_zero():
         )
 
     return jsonify(sucesso=True, mensagem="Marco zero salvo com sucesso.")
+
+
+@rota_configuracoes.get("/configuracoes/registros-ponto")
+@exigir_tipos_conta("Suporte")
+def exibir_registros_ponto():
+    filtros = obter_filtros_registros(request.args)
+    erro = None
+    if filtros["data"]:
+        try:
+            date.fromisoformat(filtros["data"])
+        except ValueError:
+            filtros["data"] = ""
+            erro = "Informe uma data válida."
+    registros = buscar_registros_ponto(filtros)
+    return renderizar_pagina(
+        "registros_ponto.html",
+        "configuracoes",
+        filtros_registros=filtros,
+        registros_ponto=registros,
+        resultado_registros=request.args.get("resultado"),
+        erro_registros=erro,
+        tipos_batida=TIPOS_BATIDA,
+    )
+
+
+@rota_configuracoes.post("/configuracoes/registros-ponto/<int:registro_id>/editar")
+@exigir_tipos_conta("Suporte")
+def editar_registro_ponto(registro_id):
+    filtros = obter_filtros_registros(request.form)
+    tipo = request.form.get("tipo_batida", "")
+    horario_texto = request.form.get("registrado_em", "")
+    try:
+        horario = datetime.strptime(horario_texto, "%Y-%m-%dT%H:%M").replace(
+            tzinfo=FUSO_HORARIO
+        )
+    except ValueError:
+        return redirect(
+            url_for("configuracoes.exibir_registros_ponto", **filtros, resultado="horario_invalido")
+        )
+    if tipo not in TIPOS_BATIDA:
+        return redirect(
+            url_for("configuracoes.exibir_registros_ponto", **filtros, resultado="tipo_invalido")
+        )
+
+    try:
+        with criar_conexao() as conexao:
+            atualizacao = conexao.execute(
+                """
+                UPDATE registros_ponto
+                SET tipo_batida = %s, registrado_em = %s, data_ponto = %s
+                WHERE id = %s
+                """,
+                (tipo, horario, horario.date(), registro_id),
+            )
+            resultado = "salvo" if atualizacao.rowcount else "nao_encontrado"
+    except UniqueViolation:
+        resultado = "duplicado"
+    return redirect(
+        url_for("configuracoes.exibir_registros_ponto", **filtros, resultado=resultado)
+    )
+
+
+@rota_configuracoes.post("/configuracoes/registros-ponto/<int:registro_id>/excluir")
+@exigir_tipos_conta("Suporte")
+def excluir_registro_ponto(registro_id):
+    filtros = obter_filtros_registros(request.form)
+    with criar_conexao() as conexao:
+        exclusao = conexao.execute(
+            "DELETE FROM registros_ponto WHERE id = %s", (registro_id,)
+        )
+    resultado = "excluido" if exclusao.rowcount else "nao_encontrado"
+    return redirect(
+        url_for("configuracoes.exibir_registros_ponto", **filtros, resultado=resultado)
+    )

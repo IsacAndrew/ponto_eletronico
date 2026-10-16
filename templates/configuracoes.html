@@ -32,6 +32,14 @@
             </form>
         </section>
         {% if conta_suporte and not modo_visualizacao %}
+            <section class="cartao-geracao-qr" aria-labelledby="titulo-registros-ponto">
+                <div>
+                    <h2 id="titulo-registros-ponto">Registros de Ponto</h2>
+                    <p>Localize, corrija ou remova uma batida registrada incorretamente.</p>
+                </div>
+                <a class="botao-gerar-qr" href="{{ url_for('configuracoes.exibir_registros_ponto') }}">Consultar registros</a>
+            </section>
+
             <section class="cartao-geracao-qr" aria-labelledby="titulo-qr-ponto">
                 <div>
                     <h2 id="titulo-qr-ponto">QR-Code do ponto</h2>
