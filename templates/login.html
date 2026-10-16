@@ -20,6 +20,7 @@
             {% endif %}
 
             <form class="formulario-login" action="" method="post" autocomplete="off">
+                {% if ponto_qr %}<input type="hidden" name="ponto_qr" value="{{ ponto_qr }}">{% endif %}
                 <div class="campo-formulario">
                     <label for="login">Login</label>
                     <input id="login" name="login" type="text" autocomplete="off" required>

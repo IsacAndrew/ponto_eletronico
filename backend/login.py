@@ -58,10 +58,19 @@ def trocar_senha():
         session.clear()
         return redirect(url_for("login.exibir_login"))
     if not usuario[0]:
+        destino_qr = session.get("ponto_qr_destino")
+        if destino_qr:
+            return redirect(
+                url_for("ponto_qr.exibir_ponto_presencial", token=destino_qr)
+            )
         return redirect(url_for("inicio.exibir_inicio"))
 
     mensagem_erro = None
     if request.method == "POST":
+        destino_qr = (
+            session.get("ponto_qr_destino")
+            or request.form.get("ponto_qr", "").strip()
+        )
         senha_nova = request.form.get("senha_nova", "")
         confirmacao_senha = request.form.get("confirmacao_senha", "")
 
@@ -148,7 +157,6 @@ def exibir_login():
                     503,
                 )
 
-            destino_qr = session.get("ponto_qr_destino")
             token_dispositivo = request.cookies.get(NOME_COOKIE_DISPOSITIVO)
             if token_dispositivo and not destino_qr:
                 with criar_conexao() as conexao:
@@ -170,4 +178,10 @@ def exibir_login():
 
         mensagem_erro = "Login ou senha incorreta"
 
-    return render_template("login.html", mensagem_erro=mensagem_erro)
+    else:
+        destino_qr = session.get("ponto_qr_destino") or request.args.get("ponto_qr", "")
+    if destino_qr:
+        session["ponto_qr_destino"] = destino_qr
+    return render_template(
+        "login.html", mensagem_erro=mensagem_erro, ponto_qr=destino_qr or ""
+    )

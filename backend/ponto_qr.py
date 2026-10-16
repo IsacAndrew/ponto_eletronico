@@ -201,7 +201,7 @@ def exibir_ponto_presencial(token):
 
         if not usuario:
             session["ponto_qr_destino"] = token
-            return redirect(url_for("login.exibir_login"))
+            return redirect(url_for("login.exibir_login", ponto_qr=token))
 
         if usuario[3]:
             session["ponto_qr_destino"] = token
