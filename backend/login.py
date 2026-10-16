@@ -120,12 +120,13 @@ def sair():
 @rota_login.route("/", methods=["GET", "POST"])
 def exibir_login():
     mensagem_erro = None
-    destino_qr = ""
+    destino_qr = session.get("ponto_qr_destino") or request.args.get("ponto_qr", "")
 
     if request.method == "POST":
         destino_qr = (
             session.get("ponto_qr_destino")
             or request.form.get("ponto_qr", "").strip()
+            or destino_qr
         )
         login_usuario = request.form.get("login", "").strip()
         senha_usuario = request.form.get("senha", "")
@@ -189,11 +190,9 @@ def exibir_login():
             return redirect(url_for("inicio.exibir_inicio"))
 
         mensagem_erro = "Login ou senha incorreta"
-    else:
-        destino_qr = session.get("ponto_qr_destino") or request.args.get("ponto_qr", "")
-        if destino_qr:
-            session["ponto_qr_destino"] = destino_qr
 
+    if destino_qr:
+        session["ponto_qr_destino"] = destino_qr
     return render_template(
         "login.html", mensagem_erro=mensagem_erro, ponto_qr=destino_qr or ""
     )
