@@ -49,15 +49,6 @@ input {
     text-align: center;
 }
 
-.identificacao-sistema {
-    margin: 0 0 22px;
-    color: var(--azul-medio);
-    font-size: 0.82rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-}
-
 .cabecalho-login h1 {
     margin: 0;
     color: var(--azul-escuro);

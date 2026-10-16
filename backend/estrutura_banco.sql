@@ -50,8 +50,12 @@ CREATE TABLE IF NOT EXISTS configuracoes_sistema (
     marco_zero_endereco TEXT NOT NULL DEFAULT '',
     raio_ponto_metros SMALLINT NOT NULL DEFAULT 100
         CHECK (raio_ponto_metros BETWEEN 1 AND 100),
+    qr_ponto_token TEXT,
     atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE configuracoes_sistema
+ADD COLUMN IF NOT EXISTS qr_ponto_token TEXT;
 
 INSERT INTO configuracoes_sistema (id)
 VALUES (1)
@@ -74,4 +78,13 @@ CREATE TABLE IF NOT EXISTS mensagens_suporte (
     remetente_tipo TEXT NOT NULL CHECK (remetente_tipo IN ('Suporte', 'Usuario')),
     mensagem TEXT NOT NULL CHECK (char_length(mensagem) BETWEEN 1 AND 2000),
     enviada_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS dispositivos_ponto (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    usuario_id BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    token_hash CHAR(64) NOT NULL UNIQUE,
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    ultimo_uso_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expira_em TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '365 days'
 );

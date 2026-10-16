@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block titulo %}QR-Code do ponto | Ponto Batista{% endblock %}
+
+{% block estilos_pagina %}
+    <link rel="stylesheet" href="/static/css/qr_ponto.css">
+{% endblock %}
+
+{% block conteudo %}
+    <section class="cartao-pagina pagina-qr-ponto">
+        <div class="acoes-qr-ponto">
+            <a class="voltar-configuracoes" href="{{ url_for('configuracoes.exibir_configuracoes') }}">← Configurações</a>
+            <button class="botao-imprimir-qr" type="button" onclick="window.print()">Imprimir QR-Code</button>
+        </div>
+
+        <article class="folha-qr-ponto" aria-labelledby="titulo-folha-qr">
+            <p class="marca-qr-ponto">PONTO BATISTA</p>
+            <h1 id="titulo-folha-qr">Registre seu ponto</h1>
+            <p class="instrucao-qr-ponto">Aponte a câmera do celular para o código e siga as instruções na tela.</p>
+            <img
+                class="imagem-qr-ponto"
+                src="{{ url_for('ponto_qr.imagem_qr_ponto') }}"
+                alt="QR-Code para registrar ponto na escola"
+            >
+            <p class="legenda-qr-ponto">Use seu próprio celular dentro da escola.</p>
+            <p class="rodape-qr-ponto">O registro confirma sua localização e respeita o intervalo mínimo entre batidas.</p>
+        </article>
+
+        <details class="opcoes-qr-ponto">
+            <summary>Trocar o QR-Code</summary>
+            <p>O novo código invalida todas as cópias impressas anteriormente.</p>
+            <form
+                method="post"
+                action="{{ url_for('ponto_qr.gerar_novo_qr_ponto') }}"
+                onsubmit="return window.confirm('Gerar um novo QR-Code? O código impresso atual deixará de funcionar.');"
+            >
+                <button type="submit">Gerar novo código</button>
+            </form>
+        </details>
+    </section>
+{% endblock %}

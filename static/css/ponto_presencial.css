@@ -1,0 +1,151 @@
+:root {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    color: #243449;
+    background: #e8eeeb;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    min-width: 320px;
+    min-height: 100vh;
+    min-height: 100dvh;
+    margin: 0;
+}
+
+.pagina-ponto-presencial {
+    display: grid;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 18px;
+    background:
+        radial-gradient(ellipse at 15% 5%, rgb(130 153 182 / 30%), transparent 38%),
+        linear-gradient(145deg, #dfe7e4, #edf1ef 58%, #dbe4e0);
+    place-items: center;
+}
+
+.cartao-ponto-presencial {
+    display: flex;
+    width: min(100%, 460px);
+    min-height: min(620px, calc(100dvh - 36px));
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(24px, 7vw, 46px);
+    border: 1px solid rgb(255 255 255 / 80%);
+    border-radius: 24px;
+    background: linear-gradient(145deg, rgb(255 255 255 / 96%), rgb(244 248 246 / 95%));
+    box-shadow: 0 22px 60px rgb(27 42 58 / 14%), inset 0 1px white;
+    text-align: center;
+}
+
+.marca-ponto-presencial {
+    display: grid;
+    width: 54px;
+    height: 54px;
+    border: 1px solid #d2dce6;
+    border-radius: 17px;
+    background: linear-gradient(145deg, #edf3f8, #fff);
+    color: #31425e;
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    place-items: center;
+}
+
+.sobrelinha-ponto-presencial {
+    margin: 18px 0 6px;
+    color: #607087;
+    font-size: .74rem;
+    font-weight: 750;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+}
+
+.cartao-ponto-presencial h1 {
+    margin: 0;
+    color: #26364b;
+    font-size: clamp(1.55rem, 7vw, 2rem);
+}
+
+.relogio-presencial {
+    margin: 26px 0 14px;
+    color: #243449;
+    font-size: clamp(3rem, 16vw, 4.5rem);
+    font-variant-numeric: tabular-nums;
+    font-weight: 650;
+    letter-spacing: -.06em;
+    line-height: 1;
+}
+
+.estado-ponto-presencial {
+    min-height: 54px;
+    margin: 0;
+    color: #405779;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+.estado-ponto-presencial[data-estado="erro"] {
+    color: #9d343b;
+}
+
+.estado-ponto-presencial[data-estado="sucesso"] {
+    color: #28603c;
+    font-weight: 700;
+}
+
+.botao-tentar-novamente {
+    min-height: 46px;
+    margin-top: 16px;
+    padding: 10px 18px;
+    border: 0;
+    border-radius: 9px;
+    background: #31445c;
+    color: white;
+    font: inherit;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.nota-ponto-presencial {
+    max-width: 280px;
+    margin: 30px 0 0;
+    color: #718096;
+    font-size: .82rem;
+    line-height: 1.5;
+}
+
+@media (max-width: 420px) {
+    .pagina-ponto-presencial {
+        padding: 12px;
+    }
+
+    .cartao-ponto-presencial {
+        min-height: calc(100dvh - 24px);
+        padding: 22px;
+        border-radius: 20px;
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .cartao-ponto-presencial {
+        animation: aparecer-cartao .35s ease-out both;
+    }
+
+    @keyframes aparecer-cartao {
+        from {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+}

@@ -17,15 +17,60 @@
     box-shadow: 0 12px 28px rgb(37 55 79 / 7%);
 }
 
-.cartao-perfil-conta h2 { margin: 0 0 16px; color: #26364b; font-size: 1.08rem; }
-.formulario-perfil-conta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
-.formulario-perfil-conta label { display: grid; gap: 6px; color: #35465d; font-size: .88rem; font-weight: 600; }
-.formulario-perfil-conta input { min-width: 0; min-height: 42px; padding: 9px 11px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #243449; font: inherit; }
-.formulario-perfil-conta button { min-height: 42px; align-self: end; padding: 9px 15px; border: 0; border-radius: 8px; background: #31445c; color: white; font: inherit; font-weight: 650; cursor: pointer; }
-.mensagem-perfil { grid-column: 1 / -1; margin: 0 0 12px; color: #28603c; }
+.cartao-perfil-conta h2 {
+    margin: 0 0 16px;
+    color: #26364b;
+    font-size: 1.08rem;
+}
+
+.formulario-perfil-conta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 13px;
+}
+
+.formulario-perfil-conta label {
+    display: grid;
+    gap: 6px;
+    color: #35465d;
+    font-size: .88rem;
+    font-weight: 600;
+}
+
+.formulario-perfil-conta input {
+    min-width: 0;
+    min-height: 42px;
+    padding: 9px 11px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+    color: #243449;
+    font: inherit;
+}
+
+.formulario-perfil-conta button {
+    min-height: 42px;
+    align-self: end;
+    padding: 9px 15px;
+    border: 0;
+    border-radius: 8px;
+    background: #31445c;
+    color: white;
+    font: inherit;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.mensagem-perfil {
+    grid-column: 1 / -1;
+    margin: 0 0 12px;
+    color: #28603c;
+}
 
 @media (max-width: 600px) {
-    .formulario-perfil-conta { grid-template-columns: 1fr; }
+    .formulario-perfil-conta {
+        grid-template-columns: 1fr;
+    }
 }
 
 .cartao-marco-zero {
@@ -34,6 +79,47 @@
     border-radius: 13px;
     background: linear-gradient(145deg, #fff, #f4f7fb);
     box-shadow: 0 12px 28px rgb(37 55 79 / 7%);
+}
+
+.cartao-geracao-qr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 18px;
+    padding: 18px 21px;
+    border: 1px solid #dbe3ec;
+    border-radius: 13px;
+    background: linear-gradient(145deg, #fff, #f4f7fb);
+    box-shadow: 0 12px 28px rgb(37 55 79 / 7%);
+}
+
+.cartao-geracao-qr h2 {
+    margin: 0 0 6px;
+    color: #26364b;
+    font-size: 1.05rem;
+}
+
+.cartao-geracao-qr p {
+    margin: 0;
+    color: #607087;
+    font-size: .88rem;
+    line-height: 1.45;
+}
+
+.botao-gerar-qr {
+    flex: 0 0 auto;
+    padding: 11px 15px;
+    border-radius: 8px;
+    background: #31445c;
+    color: white;
+    font-size: .9rem;
+    font-weight: 650;
+    text-decoration: none;
+}
+
+.botao-gerar-qr:hover {
+    background: #243449;
 }
 
 .botao-abrir-marco-zero {
@@ -358,6 +444,16 @@
 }
 
 @media (max-width: 600px) {
+    .cartao-geracao-qr {
+        align-items: stretch;
+        flex-direction: column;
+        padding: 16px;
+    }
+
+    .botao-gerar-qr {
+        text-align: center;
+    }
+
     .botao-abrir-marco-zero {
         min-height: 78px;
         gap: 9px;

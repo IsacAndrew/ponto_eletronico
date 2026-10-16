@@ -32,6 +32,14 @@
             </form>
         </section>
         {% if conta_suporte and not modo_visualizacao %}
+            <section class="cartao-geracao-qr" aria-labelledby="titulo-qr-ponto">
+                <div>
+                    <h2 id="titulo-qr-ponto">QR-Code do ponto</h2>
+                    <p>Gere e imprima o código para os professores registrarem o ponto pelo celular na escola.</p>
+                </div>
+                <a class="botao-gerar-qr" href="{{ url_for('ponto_qr.exibir_qr_ponto') }}">Gerar QR-Code</a>
+            </section>
+
             <section class="cartao-marco-zero" aria-labelledby="titulo-marco-zero">
                 <button class="botao-abrir-marco-zero" id="abrir-marco-zero" type="button" aria-haspopup="dialog">
                     <span class="texto-marco-zero">

@@ -11,9 +11,13 @@ def garantir_tabela_marco_zero(conexao):
             marco_zero_endereco TEXT NOT NULL DEFAULT '',
             raio_ponto_metros SMALLINT NOT NULL DEFAULT 100
                 CHECK (raio_ponto_metros BETWEEN 1 AND 100),
+            qr_ponto_token TEXT,
             atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
         """
+    )
+    conexao.execute(
+        "ALTER TABLE configuracoes_sistema ADD COLUMN IF NOT EXISTS qr_ponto_token TEXT"
     )
     conexao.execute(
         "INSERT INTO configuracoes_sistema (id) VALUES (1) ON CONFLICT (id) DO NOTHING"

@@ -5,6 +5,7 @@ from flask import Blueprint, redirect, request, session, url_for
 from werkzeug.security import generate_password_hash
 
 from .banco_dados import criar_conexao
+from .ponto_qr import revogar_dispositivos_usuario
 from .permissoes import exigir_tipos_conta, renderizar_pagina
 
 rota_usuarios = Blueprint("usuarios", __name__)
@@ -341,6 +342,8 @@ def editar_usuario(usuario_id):
                     usuario_id,
                 ),
             )
+            if not ativo:
+                revogar_dispositivos_usuario(conexao, usuario_id)
 
     return redirect(url_for("usuarios.exibir_usuarios", filtro=filtro, busca=busca))
 
@@ -441,7 +444,7 @@ def excluir_jornada(usuario_id, dia):
 
 
 @rota_usuarios.route("/usuarios/<int:usuario_id>/redefinir-senha", methods=["POST"])
-@exigir_tipos_conta("Suporte", "Administração")
+@exigir_tipos_conta("Suporte")
 def redefinir_senha(usuario_id):
     filtro = request.values.get("filtro", "nome")
     busca = request.values.get("busca", "").strip()
@@ -454,6 +457,7 @@ def redefinir_senha(usuario_id):
             """,
             (generate_password_hash("102030"), usuario_id),
         )
+        revogar_dispositivos_usuario(conexao, usuario_id)
 
     return redirect(
         url_for(

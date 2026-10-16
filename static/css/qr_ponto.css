@@ -1,0 +1,170 @@
+.pagina-qr-ponto {
+    width: min(100%, 900px);
+}
+
+.acoes-qr-ponto {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.voltar-configuracoes {
+    color: #43566f;
+    font-size: .9rem;
+    text-decoration: none;
+}
+
+.botao-imprimir-qr,
+.opcoes-qr-ponto button {
+    min-height: 42px;
+    padding: 9px 15px;
+    border: 0;
+    border-radius: 8px;
+    background: #31445c;
+    color: white;
+    font: inherit;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.folha-qr-ponto {
+    display: flex;
+    width: min(100%, 620px);
+    min-height: 680px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: auto;
+    padding: 40px;
+    border: 1px solid #dbe3ec;
+    border-radius: 14px;
+    background: white;
+    color: #243449;
+    text-align: center;
+    box-shadow: 0 12px 28px rgb(37 55 79 / 8%);
+}
+
+.marca-qr-ponto {
+    margin: 0 0 12px;
+    color: #607087;
+    font-size: .76rem;
+    font-weight: 750;
+    letter-spacing: .18em;
+}
+
+.folha-qr-ponto h1 {
+    margin: 0;
+    color: #1e2e43;
+    font-size: clamp(1.7rem, 5vw, 2.35rem);
+}
+
+.instrucao-qr-ponto {
+    max-width: 370px;
+    margin: 12px 0 22px;
+    color: #607087;
+    line-height: 1.55;
+}
+
+.imagem-qr-ponto {
+    display: block;
+    width: min(72vw, 300px);
+    height: auto;
+    aspect-ratio: 1;
+}
+
+.legenda-qr-ponto {
+    margin: 18px 0 0;
+    color: #31445c;
+    font-weight: 700;
+}
+
+.rodape-qr-ponto {
+    max-width: 350px;
+    margin: 9px 0 0;
+    color: #718096;
+    font-size: .83rem;
+    line-height: 1.45;
+}
+
+.opcoes-qr-ponto {
+    width: min(100%, 620px);
+    margin: 18px auto 0;
+    color: #52647a;
+}
+
+.opcoes-qr-ponto summary {
+    cursor: pointer;
+}
+
+.opcoes-qr-ponto p {
+    font-size: .88rem;
+}
+
+@page {
+    size: A5 portrait;
+    margin: 0;
+}
+
+@media print {
+    body {
+        min-width: 0;
+        background: white !important;
+    }
+
+    .estrutura-sistema {
+        display: block;
+        min-height: 0;
+        background: white !important;
+    }
+
+    .menu-lateral,
+    .fundo-menu-mobile,
+    .barra-superior-mobile,
+    .acoes-qr-ponto,
+    .opcoes-qr-ponto {
+        display: none !important;
+    }
+
+    .conteudo-principal,
+    .area-conteudo {
+        display: block;
+        min-height: 0;
+        padding: 0 !important;
+        overflow: visible;
+        background: white !important;
+    }
+
+    .pagina-qr-ponto {
+        width: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        background: white !important;
+        box-shadow: none !important;
+    }
+
+    .folha-qr-ponto {
+        width: 148mm;
+        height: 210mm;
+        min-height: 0;
+        padding: 13mm;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        break-inside: avoid;
+    }
+
+    .imagem-qr-ponto {
+        width: 78mm;
+        height: 78mm;
+    }
+}
+
+@media (max-width: 560px) {
+    .folha-qr-ponto {
+        min-height: 540px;
+        padding: 25px 18px;
+    }
+}

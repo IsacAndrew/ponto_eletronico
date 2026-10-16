@@ -191,9 +191,11 @@
                 <footer class="acoes-edicao">
                     <a class="botao-cancelar" href="{{ url_for('usuarios.exibir_usuarios', filtro=filtro_atual, busca=busca) }}">Cancelar</a>
                     <a class="botao-excluir-link" href="{{ url_for('usuarios.excluir_usuario', usuario_id=usuario_edicao.id, filtro=filtro_atual, busca=busca) }}">Excluir acesso</a>
-                    <form method="post" action="{{ url_for('usuarios.redefinir_senha', usuario_id=usuario_edicao.id, filtro=filtro_atual, busca=busca) }}">
-                        <button class="botao-redefinir" type="submit">Redefinir senha</button>
-                    </form>
+                    {% if conta_suporte and not modo_visualizacao %}
+                        <form method="post" action="{{ url_for('usuarios.redefinir_senha', usuario_id=usuario_edicao.id, filtro=filtro_atual, busca=busca) }}">
+                            <button class="botao-redefinir" type="submit">Redefinir senha</button>
+                        </form>
+                    {% endif %}
                     <button class="botao-salvar" type="submit" form="formulario-edicao">Salvar alterações</button>
                 </footer>
                 {% endif %}

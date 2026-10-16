@@ -11,6 +11,7 @@ from flask import (
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from .banco_dados import criar_conexao
+from .ponto_qr import NOME_COOKIE_DISPOSITIVO, revogar_dispositivo
 
 rota_login = Blueprint("login", __name__)
 
@@ -80,6 +81,11 @@ def trocar_senha():
                     """,
                     (generate_password_hash(senha_nova), usuario_id),
                 )
+            destino_qr = session.get("ponto_qr_destino")
+            if destino_qr:
+                return redirect(
+                    url_for("ponto_qr.exibir_ponto_presencial", token=destino_qr)
+                )
             return redirect(url_for("inicio.exibir_inicio"))
 
     return render_template("trocar_senha.html", mensagem_erro=mensagem_erro)
@@ -87,8 +93,14 @@ def trocar_senha():
 
 @rota_login.post("/sair")
 def sair():
+    token_dispositivo = request.cookies.get(NOME_COOKIE_DISPOSITIVO)
+    if token_dispositivo:
+        with criar_conexao() as conexao:
+            revogar_dispositivo(conexao, token_dispositivo)
     session.clear()
-    return redirect(url_for("login.exibir_login"))
+    resposta = redirect(url_for("login.exibir_login"))
+    resposta.delete_cookie(NOME_COOKIE_DISPOSITIVO)
+    return resposta
 
 
 @rota_login.route("/", methods=["GET", "POST"])
@@ -136,12 +148,24 @@ def exibir_login():
                     503,
                 )
 
+            destino_qr = session.get("ponto_qr_destino")
+            token_dispositivo = request.cookies.get(NOME_COOKIE_DISPOSITIVO)
+            if token_dispositivo and not destino_qr:
+                with criar_conexao() as conexao:
+                    revogar_dispositivo(conexao, token_dispositivo)
+
             session.clear()
             session["usuario_id"] = usuario[0]
             session["usuario_nome"] = usuario[1]
             session["tipo_conta"] = usuario[3]
+            if destino_qr:
+                session["ponto_qr_destino"] = destino_qr
             if usuario[4]:
                 return redirect(url_for("login.trocar_senha"))
+            if destino_qr:
+                return redirect(
+                    url_for("ponto_qr.exibir_ponto_presencial", token=destino_qr)
+                )
             return redirect(url_for("inicio.exibir_inicio"))
 
         mensagem_erro = "Login ou senha incorreta"
