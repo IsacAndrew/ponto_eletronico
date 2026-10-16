@@ -39,8 +39,15 @@ MENU_PROFESSOR = [
     ),
 ]
 
+MENU_SUPORTE = [
+    *MENU_ADMINISTRACAO[:4],
+    ("Chats", "chat_suporte.exibir_chat_suporte", "chat_suporte", "conversa"),
+    *MENU_ADMINISTRACAO[4:],
+    ("DB", "db.exibir_db", "db", "banco"),
+]
+
 MENUS_POR_TIPO_CONTA = {
-    "Suporte": MENU_ADMINISTRACAO + [("DB", "db.exibir_db", "db", "banco")],
+    "Suporte": MENU_SUPORTE,
     "Administração": MENU_ADMINISTRACAO,
     "Professor": MENU_PROFESSOR,
     "Colaborador": MENU_PROFESSOR,

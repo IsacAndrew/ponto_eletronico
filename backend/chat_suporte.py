@@ -59,6 +59,7 @@ def exibir_chat_suporte():
     suporte = g.tipo_conta_real == "Suporte" and not g.modo_visualizacao
     conversas = []
     conversa_id = None
+    conversa_nome = None
     if suporte:
         with criar_conexao() as conexao:
             garantir_tabelas_chat(conexao)
@@ -75,6 +76,9 @@ def exibir_chat_suporte():
         selecionada = request.args.get("conversa", type=int)
         if selecionada and any(item[0] == selecionada for item in conversas):
             conversa_id = selecionada
+            conversa_nome = next(
+                item[1] for item in conversas if item[0] == selecionada
+            )
     else:
         with criar_conexao() as conexao:
             garantir_tabelas_chat(conexao)
@@ -87,6 +91,7 @@ def exibir_chat_suporte():
         suporte_chat=suporte,
         conversas=conversas,
         conversa_id=conversa_id,
+        conversa_nome=conversa_nome,
     )
 
 

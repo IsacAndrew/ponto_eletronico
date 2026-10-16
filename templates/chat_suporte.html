@@ -9,7 +9,7 @@
 
 {% block conteudo %}
     <section class="cartao-pagina cartao-chat-suporte{% if suporte_chat %} chat-visao-suporte{% endif %}">
-        <h1>Chat com suporte</h1>
+        <h1>{{ "Chats" if suporte_chat else "Chat com suporte" }}</h1>
         {% if suporte_chat %}
             <div class="painel-conversas">
                 <nav class="lista-conversas" aria-label="Conversas abertas">
@@ -25,7 +25,7 @@
                 </nav>
                 <section class="area-chat" data-conversa="{{ conversa_id or '' }}" data-suporte="true">
                     {% if conversa_id %}
-                        <header class="cabecalho-chat"><h2>Atendimento</h2><button type="button" class="botao-encerrar-chat" data-encerrar>Encerrar conversa</button></header>
+                        <header class="cabecalho-chat"><h2>{{ conversa_nome }}</h2><button type="button" class="botao-encerrar-chat" data-encerrar>Encerrar conversa</button></header>
                         <div class="mensagens-chat" data-mensagens aria-live="polite"></div>
                         <form class="formulario-mensagem" data-form-mensagem><textarea name="mensagem" maxlength="2000" placeholder="Digite sua mensagem" required></textarea><button type="submit">Enviar</button></form>
                         <p class="status-chat" data-status role="status"></p>
