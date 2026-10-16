@@ -45,12 +45,19 @@ def obter_periodo(formulario):
     if tipo not in TIPOS_PERIODO:
         return None, None, "Selecione um tipo de período válido."
 
-    if tipo in {"dia", "semana"}:
+    if tipo == "dia":
+        inicio = converter_data(formulario.get("data_inicio"))
+        fim = converter_data(formulario.get("data_fim"))
+        if not inicio or not fim:
+            return None, None, "Informe as datas inicial e final."
+        if fim < inicio:
+            return None, None, "A data final deve ser igual ou posterior à data inicial."
+        return inicio, fim, None
+
+    if tipo == "semana":
         referencia = converter_data(formulario.get("data_referencia"))
         if not referencia:
-            return None, None, "Informe uma data válida para o período."
-        if tipo == "dia":
-            return referencia, referencia, None
+            return None, None, "Informe uma data para localizar a semana."
         inicio = referencia - timedelta(days=(referencia.weekday() + 1) % 7)
         return inicio, inicio + timedelta(days=6), None
 
@@ -314,23 +321,33 @@ def dados_formulario(formulario):
     return {
         "periodo": formulario.get("periodo", "dia"),
         "data_referencia": formulario.get("data_referencia", ""),
+        "data_inicio": formulario.get("data_inicio", ""),
+        "data_fim": formulario.get("data_fim", ""),
         "mes": formulario.get("mes", ""),
         "ano": formulario.get("ano", ""),
-        "escopo": formulario.get("escopo", "todos"),
+        "escopos": formulario.getlist("escopo"),
     }
 
 
-def filtrar_colaboradores(colaboradores, escopo):
-    if escopo == "todos":
+def filtrar_colaboradores(colaboradores, escopos):
+    if escopos == ["todos"]:
         return colaboradores, "Todos os usuários"
-    if not escopo.startswith("usuario:"):
+    if not escopos or "todos" in escopos:
         return None, ""
+
     try:
-        usuario_id = int(escopo.split(":", 1)[1])
-    except ValueError:
+        ids_selecionados = {int(valor.split(":", 1)[1]) for valor in escopos
+                            if valor.startswith("usuario:")}
+    except (IndexError, ValueError):
         return None, ""
-    selecionados = [usuario for usuario in colaboradores if usuario[0] == usuario_id]
-    return selecionados, selecionados[0][1] if selecionados else ""
+    if not ids_selecionados or len(ids_selecionados) != len(escopos):
+        return None, ""
+
+    selecionados = [usuario for usuario in colaboradores if usuario[0] in ids_selecionados]
+    if len(selecionados) != len(ids_selecionados):
+        return None, ""
+    nomes = ", ".join(usuario[1] for usuario in selecionados)
+    return selecionados, nomes
 
 
 @rota_planilha.route("/planilha", methods=["GET", "POST"])
@@ -340,12 +357,12 @@ def exibir_planilha():
     erro = None
     if request.method == "POST":
         inicio, fim, erro = obter_periodo(request.form)
-        escopo = campos["escopo"]
-        if escopo != "todos" and not escopo.startswith("usuario:"):
-            erro = "Selecione um usuário válido."
+        escopos = campos["escopos"]
+        if not escopos:
+            erro = "Selecione ao menos um usuário ou todos os usuários."
         if not erro:
             colaboradores = buscar_usuarios_exportacao()
-            selecionados, nome = filtrar_colaboradores(colaboradores, escopo)
+            selecionados, nome = filtrar_colaboradores(colaboradores, escopos)
             if not selecionados:
                 erro = "Nenhum usuário corresponde à seleção."
             else:

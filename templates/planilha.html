@@ -13,16 +13,25 @@
     </header>
     {% if erro_planilha %}<p class="erro-planilha" role="alert">{{ erro_planilha }}</p>{% endif %}
     <form class="filtros-planilha" method="post" action="{{ url_for('planilha.exibir_planilha') }}">
-        <details class="seletor-planilha">
-            <summary><span><strong>Colaboradores</strong><small>Uma pessoa ou todos os usuários</small></span><span class="seta-seletor" aria-hidden="true">⌄</span></summary>
-            <div class="conteudo-seletor campo-planilha">
-                <label for="escopo">Colaborador, professor ou grupo</label>
-                <select id="escopo" name="escopo" required>
-                    <option value="todos" {% if campos.escopo == 'todos' %}selected{% endif %}>Todos os usuários</option>
+        <details class="seletor-planilha seletor-colaboradores">
+            <summary><span><strong>Colaboradores</strong><small data-resumo-colaboradores-cabecalho>Todos os usuários selecionados</small></span><span class="seta-seletor" aria-hidden="true">⌄</span></summary>
+            <div class="conteudo-seletor conteudo-colaboradores">
+                <label for="busca-colaborador">Colaborador, professor ou grupo</label>
+                <input id="busca-colaborador" class="busca-colaborador" type="search" placeholder="Digite para buscar um usuário" autocomplete="off">
+                <div class="lista-colaboradores" role="group" aria-label="Usuários disponíveis">
+                    <label class="opcao-colaborador opcao-todos">
+                        <input type="checkbox" name="escopo" value="todos" {% if not campos.escopos or campos.escopos == ['todos'] %}checked{% endif %}>
+                        <span><strong>Todos os usuários</strong></span>
+                    </label>
                     {% for colaborador in colaboradores %}
-                    <option value="usuario:{{ colaborador[0] }}" {% if campos.escopo == 'usuario:' ~ colaborador[0] %}selected{% endif %}>{{ colaborador[1] }} · {{ colaborador[2] }}</option>
+                    <label class="opcao-colaborador" data-nome-colaborador="{{ colaborador[1]|lower }} {{ colaborador[2]|lower }}">
+                        <input type="checkbox" name="escopo" value="usuario:{{ colaborador[0] }}" {% if 'usuario:' ~ colaborador[0] in campos.escopos %}checked{% endif %}>
+                        <span>{{ colaborador[1] }}<small>{{ colaborador[2] }}</small></span>
+                    </label>
                     {% endfor %}
-                </select>
+                    <p class="sem-colaboradores" hidden>Nenhum usuário encontrado.</p>
+                </div>
+                <p class="resumo-colaboradores" data-resumo-colaboradores aria-live="polite"></p>
             </div>
         </details>
         <details class="seletor-planilha">
@@ -37,8 +46,18 @@
                         <option value="ano" {% if campos.periodo == 'ano' %}selected{% endif %}>Ano</option>
                     </select>
                 </div>
-                <div class="campo-planilha campo-data-referencia" data-period-field="dia semana">
-                    <label for="data-referencia">Dia de referência</label>
+                <div class="campo-intervalo-datas" data-period-field="dia">
+                    <div class="campo-planilha">
+                        <label for="data-inicio">Data inicial</label>
+                        <input id="data-inicio" name="data_inicio" type="date" value="{{ campos.data_inicio }}">
+                    </div>
+                    <div class="campo-planilha">
+                        <label for="data-fim">Data final</label>
+                        <input id="data-fim" name="data_fim" type="date" value="{{ campos.data_fim }}">
+                    </div>
+                </div>
+                <div class="campo-planilha campo-data-referencia" data-period-field="semana" hidden>
+                    <label for="data-referencia">Dia da semana</label>
                     <input id="data-referencia" name="data_referencia" type="date" value="{{ campos.data_referencia }}">
                 </div>
                 <div class="campo-planilha campo-mes" data-period-field="mes" hidden>

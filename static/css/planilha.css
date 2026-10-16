@@ -24,3 +24,23 @@
 .botao-baixar-planilha svg { width:19px; height:19px; fill:none; stroke:currentColor; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.8; }
 .erro-planilha { max-width:720px; margin:0 auto 16px; padding:11px 14px; border:1px solid #efc4c4; border-radius:8px; background:#fff5f5; color:#9a3d3d; font-size:.88rem; }
 @media(max-width:640px) { .cabecalho-planilha{margin-bottom:18px}.filtros-planilha{gap:11px;padding:15px}.conteudo-seletor{grid-template-columns:1fr;gap:12px;padding:0 13px 13px}.previa-periodo{grid-column:auto}.rodape-filtros-planilha,.botao-baixar-planilha{width:100%} }
+
+/* Campos condicionais e seleção pesquisável de várias pessoas. */
+[hidden] { display:none !important; }
+.conteudo-colaboradores { display:grid; grid-template-columns:1fr; align-items:stretch; }
+.busca-colaborador { width:100%; min-height:44px; padding:9px 11px; border:1px solid #d2dcd8; border-radius:8px; background:#fff; color:#2d3d3a; font:inherit; font-size:.9rem; }
+.busca-colaborador:focus { border-color:#71889f; outline:3px solid rgb(113 136 159 / 15%); }
+.lista-colaboradores { display:grid; max-height:250px; overflow:auto; border:1px solid #dce4e1; border-radius:9px; background:#fff; }
+.opcao-colaborador { display:flex; min-height:44px; align-items:center; gap:10px; padding:8px 12px; border-bottom:1px solid #edf1ef; color:#344451; cursor:pointer; }
+.opcao-colaborador:last-of-type { border-bottom:0; }
+.opcao-colaborador:hover { background:#f5f8f7; }
+.opcao-colaborador input { width:17px; height:17px; flex:0 0 auto; accent-color:#344d69; }
+.opcao-colaborador span { display:flex; flex-wrap:wrap; align-items:center; gap:4px 9px; font-size:.86rem; }
+.opcao-colaborador small { color:#77837f; font-size:.75rem; }
+.opcao-todos { position:sticky; top:0; z-index:1; border-bottom:1px solid #dce4e1; background:#f7f9f8; }
+.sem-colaboradores { margin:0; padding:13px; color:#74817d; font-size:.84rem; text-align:center; }
+.resumo-colaboradores { min-height:1.1em; margin:0; color:#64716f; font-size:.8rem; }
+.campo-intervalo-datas { grid-column:1/-1; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+@media(max-width:640px) {
+    .campo-intervalo-datas { grid-template-columns:1fr; gap:12px; }
+}
