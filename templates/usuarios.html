@@ -170,10 +170,10 @@
                     <input id="login-usuario" name="login" type="text" value="{{ usuario_edicao.login }}" autocomplete="username" required>
 
                     <label for="email-usuario">Email</label>
-                    <input id="email-usuario" name="email" type="email" value="{{ usuario_edicao.email }}" autocomplete="email" required>
+                    <input id="email-usuario" name="email" type="email" value="{{ usuario_edicao.email or '' }}" autocomplete="email">
 
                     <label for="telefone-usuario">Telefone</label>
-                    <input id="telefone-usuario" name="telefone" type="tel" value="{{ usuario_edicao.telefone }}" placeholder="(xx) xxxxx-xxxx" autocomplete="tel" required>
+                    <input id="telefone-usuario" name="telefone" type="tel" value="{{ usuario_edicao.telefone or '' }}" placeholder="(xx) xxxxx-xxxx" autocomplete="tel" data-formatar-telefone>
 
                     <label for="permissao-usuario">Permissão</label>
                     <select id="permissao-usuario" name="tipo_conta" required>
@@ -226,13 +226,14 @@
                     <input id="novo-login" name="login" type="text" value="{{ usuario_novo.login }}" autocomplete="username" required>
 
                     <label for="novo-email">Email</label>
-                    <input id="novo-email" name="email" type="email" value="{{ usuario_novo.email }}" autocomplete="email" required>
+                    <input id="novo-email" name="email" type="email" value="{{ usuario_novo.email or '' }}" autocomplete="email">
 
                     <label for="novo-telefone">Telefone</label>
-                    <input id="novo-telefone" name="telefone" type="tel" value="{{ usuario_novo.telefone }}" placeholder="(xx) xxxxx-xxxx" autocomplete="tel" required>
+                    <input id="novo-telefone" name="telefone" type="tel" value="{{ usuario_novo.telefone or '' }}" placeholder="(xx) xxxxx-xxxx" autocomplete="tel" data-formatar-telefone>
 
                     <label for="nova-permissao">Permissão</label>
-                    <select id="nova-permissao" name="tipo_conta" required>
+                    <select id="nova-permissao" name="tipo_conta">
+                        <option value="" selected>Definir depois (Professor inicialmente)</option>
                         {% for tipo in tipos_conta %}
                             <option value="{{ tipo }}" {% if usuario_novo.tipo_conta == tipo %}selected{% endif %}>{{ tipo }}</option>
                         {% endfor %}
@@ -246,4 +247,5 @@
             </section>
         </dialog>
     {% endif %}
+    <script src="{{ url_for('static', filename='js/usuarios.js') }}" defer></script>
 {% endblock %}

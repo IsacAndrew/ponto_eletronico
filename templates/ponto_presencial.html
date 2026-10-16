@@ -14,8 +14,6 @@
         data-registro-url="{{ url_for('inicio.registrar_ponto') }}"
     >
         <section class="cartao-ponto-presencial" aria-labelledby="titulo-ponto-presencial">
-            <span class="marca-ponto-presencial" aria-hidden="true">PB</span>
-            <p class="sobrelinha-ponto-presencial">Ponto Batista</p>
             <h1 id="titulo-ponto-presencial">Olá, {{ nome_usuario.split()[0] }}</h1>
             <p class="relogio-presencial" data-relogio>--:--:--</p>
             <p class="estado-ponto-presencial" data-mensagem role="status" aria-live="polite">

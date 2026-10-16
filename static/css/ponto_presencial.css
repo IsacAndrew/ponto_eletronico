@@ -43,29 +43,6 @@ body {
     text-align: center;
 }
 
-.marca-ponto-presencial {
-    display: grid;
-    width: 54px;
-    height: 54px;
-    border: 1px solid #d2dce6;
-    border-radius: 17px;
-    background: linear-gradient(145deg, #edf3f8, #fff);
-    color: #31425e;
-    font-size: 1rem;
-    font-weight: 800;
-    letter-spacing: .08em;
-    place-items: center;
-}
-
-.sobrelinha-ponto-presencial {
-    margin: 18px 0 6px;
-    color: #607087;
-    font-size: .74rem;
-    font-weight: 750;
-    letter-spacing: .16em;
-    text-transform: uppercase;
-}
-
 .cartao-ponto-presencial h1 {
     margin: 0;
     color: #26364b;

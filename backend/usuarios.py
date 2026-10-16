@@ -1,5 +1,6 @@
 import re
 from datetime import time
+from threading import Lock
 
 from flask import Blueprint, redirect, request, session, url_for
 from werkzeug.security import generate_password_hash
@@ -14,6 +15,8 @@ DIAS_SEMANA = (
     "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira",
     "Sexta-feira", "Sábado", "Domingo",
 )
+_campos_opcionais_atualizados = False
+_trava_campos_opcionais = Lock()
 CAMPOS_FILTRO = {
     "nome": "nome_completo",
     "email": "email",
@@ -155,28 +158,59 @@ def exibir_usuarios():
 
 
 def validar_dados_usuario(formulario):
+    telefone = re.sub(r"\D", "", formulario.get("telefone", ""))
+    if telefone.startswith("55") and len(telefone) == 13:
+        telefone = telefone[2:]
+    if len(telefone) == 11:
+        telefone = f"({telefone[:2]}) {telefone[2:7]}-{telefone[7:]}"
+    elif not telefone:
+        telefone = ""
+
     dados = {
         "nome_completo": formulario.get("nome_completo", "").strip(),
         "login": formulario.get("login", "").strip(),
-        "email": formulario.get("email", "").strip(),
-        "telefone": formulario.get("telefone", "").strip(),
-        "tipo_conta": formulario.get("tipo_conta", ""),
+        "email": formulario.get("email", "").strip() or None,
+        "telefone": telefone or None,
+        "tipo_conta": formulario.get("tipo_conta", "") or "Professor",
     }
 
     if len(dados["nome_completo"].split()) < 2:
         return dados, "Informe o nome completo."
     if not dados["login"]:
         return dados, "Informe o login."
-    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", dados["email"]):
+    if dados["email"] and not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", dados["email"]):
         return dados, "Informe um email válido."
-    if not re.fullmatch(r"\(\d{2}\) \d{5}-\d{4}", dados["telefone"]):
+    if dados["telefone"] and not re.fullmatch(r"\(\d{2}\) \d{5}-\d{4}", dados["telefone"]):
         return dados, "Use o formato de telefone (xx) xxxxx-xxxx."
     if dados["tipo_conta"] not in TIPOS_CONTA:
         return dados, "Selecione uma permissão válida."
     return dados, None
 
 
+def garantir_campos_opcionais_usuario():
+    global _campos_opcionais_atualizados
+    if _campos_opcionais_atualizados:
+        return
+    with _trava_campos_opcionais:
+        if _campos_opcionais_atualizados:
+            return
+        with criar_conexao() as conexao:
+            conexao.execute("ALTER TABLE usuarios ALTER COLUMN email DROP NOT NULL")
+            conexao.execute("ALTER TABLE usuarios ALTER COLUMN telefone DROP NOT NULL")
+        _campos_opcionais_atualizados = True
+
+
 def buscar_conflito_usuario(usuario_id, login, email):
+    if not email:
+        with criar_conexao() as conexao:
+            if usuario_id is None:
+                return conexao.execute(
+                    "SELECT id FROM usuarios WHERE login = %s LIMIT 1", (login,)
+                ).fetchone()
+            return conexao.execute(
+                "SELECT id FROM usuarios WHERE id <> %s AND login = %s LIMIT 1",
+                (usuario_id, login),
+            ).fetchone()
     with criar_conexao() as conexao:
         if usuario_id is None:
             return conexao.execute(
@@ -211,7 +245,7 @@ def adicionar_usuario():
         "login": "",
         "email": "",
         "telefone": "",
-        "tipo_conta": "Professor",
+        "tipo_conta": "",
     }
 
     if request.method == "GET":
@@ -240,6 +274,7 @@ def adicionar_usuario():
             erro_novo="Já existe uma conta com a permissão Suporte.",
         )
 
+    garantir_campos_opcionais_usuario()
     with criar_conexao() as conexao:
         conexao.execute(
             """
