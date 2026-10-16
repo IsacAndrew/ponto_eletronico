@@ -6,6 +6,7 @@ from flask import Blueprint, redirect, request, session, url_for
 from werkzeug.security import generate_password_hash
 
 from .banco_dados import criar_conexao
+from .jornada import garantir_estrutura_jornada
 from .ponto_qr import revogar_dispositivos_usuario
 from .permissoes import exigir_tipos_conta, renderizar_pagina
 
@@ -58,10 +59,12 @@ def buscar_usuarios(filtro, busca):
 
 
 def buscar_usuario(usuario_id):
+    garantir_estrutura_jornada()
     with criar_conexao() as conexao:
         usuario = conexao.execute(
             """
-            SELECT id, nome_completo, login, email, telefone, tipo_conta, ativo
+            SELECT id, nome_completo, login, email, telefone, tipo_conta, ativo,
+                   quantidade_batidas, dias_trabalho_semana
             FROM usuarios
             WHERE id = %s
             """,
@@ -73,7 +76,10 @@ def buscar_usuario(usuario_id):
 
     return dict(
         zip(
-            ("id", "nome_completo", "login", "email", "telefone", "tipo_conta", "ativo"),
+            (
+                "id", "nome_completo", "login", "email", "telefone", "tipo_conta",
+                "ativo", "quantidade_batidas", "dias_trabalho_semana",
+            ),
             usuario,
         )
     )
@@ -275,14 +281,15 @@ def adicionar_usuario():
         )
 
     garantir_campos_opcionais_usuario()
+    garantir_estrutura_jornada()
     with criar_conexao() as conexao:
         conexao.execute(
             """
             INSERT INTO usuarios (
                 nome_completo, login, email, telefone, tipo_conta, senha_hash,
-                ativo, deve_trocar_senha
+                ativo, deve_trocar_senha, quantidade_batidas, dias_trabalho_semana
             )
-            VALUES (%s, %s, %s, %s, %s, %s, TRUE, TRUE)
+            VALUES (%s, %s, %s, %s, %s, %s, TRUE, TRUE, %s, 5)
             """,
             (
                 dados["nome_completo"],
@@ -291,6 +298,7 @@ def adicionar_usuario():
                 dados["telefone"],
                 dados["tipo_conta"],
                 generate_password_hash("102030"),
+                2 if dados["tipo_conta"] == "Professor" else 4,
             ),
         )
 
@@ -396,6 +404,11 @@ def salvar_jornada(usuario_id):
         dia = int(request.form.get("dia_semana", ""))
     except ValueError:
         dia = -1
+    try:
+        quantidade_batidas = int(request.form.get("quantidade_batidas", usuario["quantidade_batidas"]))
+        dias_trabalho = int(request.form.get("dias_trabalho_semana", usuario["dias_trabalho_semana"]))
+    except (TypeError, ValueError):
+        quantidade_batidas = dias_trabalho = 0
     valores = {
         "dia_semana": dia,
         "entrada": request.form.get("entrada", ""),
@@ -403,16 +416,21 @@ def salvar_jornada(usuario_id):
         "retorno_intervalo": request.form.get("retorno_intervalo", ""),
         "saida": request.form.get("saida", ""),
     }
-    campos_horario = ("entrada", "intervalo", "retorno_intervalo", "saida")
     horarios = []
     try:
+        campos_horario = (
+            ("entrada", "saida") if quantidade_batidas == 2
+            else ("entrada", "intervalo", "retorno_intervalo", "saida")
+        )
         horarios = [time.fromisoformat(valores[campo]) for campo in campos_horario]
     except ValueError:
         pass
     if (
         dia not in range(7)
-        or len(horarios) != 4
-        or not all(horarios[indice] < horarios[indice + 1] for indice in range(3))
+        or quantidade_batidas not in {2, 4}
+        or dias_trabalho not in range(1, 8)
+        or len(horarios) != quantidade_batidas
+        or not all(horarios[indice] < horarios[indice + 1] for indice in range(len(horarios) - 1))
     ):
         return renderizar_lista_usuarios(
             filtro,
@@ -421,10 +439,28 @@ def salvar_jornada(usuario_id):
             aba_edicao="jornada",
             jornadas=buscar_jornadas(usuario_id),
             jornada_edicao=valores,
-            erro_jornada="Informe os quatro horários em ordem: entrada, intervalo, retorno e saída.",
+            erro_jornada="Informe os horários exigidos pela quantidade de batidas, em ordem.",
+        )
+
+    jornadas_existentes = buscar_jornadas(usuario_id)
+    dias_existentes = {jornada["dia_semana"] for jornada in jornadas_existentes}
+    quantidade_dias_configurados = len(dias_existentes) + (dia not in dias_existentes)
+    if quantidade_dias_configurados > dias_trabalho:
+        return renderizar_lista_usuarios(
+            filtro,
+            busca,
+            usuario_edicao=usuario,
+            aba_edicao="jornada",
+            jornadas=jornadas_existentes,
+            jornada_edicao=valores,
+            erro_jornada="Remova um dia cadastrado ou aumente os dias de trabalho por semana.",
         )
 
     with criar_conexao() as conexao:
+        conexao.execute(
+            "UPDATE usuarios SET quantidade_batidas = %s, dias_trabalho_semana = %s WHERE id = %s",
+            (quantidade_batidas, dias_trabalho, usuario_id),
+        )
         conexao.execute(
             """
             INSERT INTO jornadas_usuarios
@@ -440,8 +476,8 @@ def salvar_jornada(usuario_id):
                 usuario_id,
                 dia,
                 valores["entrada"],
-                valores["intervalo"],
-                valores["retorno_intervalo"],
+                valores["intervalo"] if quantidade_batidas == 4 else None,
+                valores["retorno_intervalo"] if quantidade_batidas == 4 else None,
                 valores["saida"],
             ),
         )

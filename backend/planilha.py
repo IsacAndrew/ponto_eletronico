@@ -5,23 +5,24 @@ from zoneinfo import ZoneInfo
 
 from flask import Blueprint, request, send_file
 from openpyxl import Workbook
-from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.worksheet.table import Table, TableStyleInfo
 
 from .banco_dados import criar_conexao
+from .jornada import garantir_estrutura_jornada
 from .permissoes import exigir_tipos_conta, renderizar_pagina
 
 rota_planilha = Blueprint("planilha", __name__)
 FUSO_HORARIO = ZoneInfo("America/Sao_Paulo")
-TIPOS_BATIDA = ("Entrada", "Intervalo", "Retorno intervalo", "Saída")
-TIPOS_PERIODO = {"dia", "semana", "mes", "intervalo"}
+TIPOS_PERIODO = {"dia", "semana", "mes", "ano"}
 
 
 def buscar_usuarios_exportacao():
+    garantir_estrutura_jornada()
     with criar_conexao() as conexao:
         return conexao.execute(
             """
-            SELECT id, nome_completo, tipo_conta
+            SELECT id, nome_completo, tipo_conta, quantidade_batidas, dias_trabalho_semana
             FROM usuarios
             ORDER BY nome_completo
             """
@@ -50,7 +51,7 @@ def obter_periodo(formulario):
             return None, None, "Informe uma data válida para o período."
         if tipo == "dia":
             return referencia, referencia, None
-        inicio = referencia - timedelta(days=referencia.weekday())
+        inicio = referencia - timedelta(days=(referencia.weekday() + 1) % 7)
         return inicio, inicio + timedelta(days=6), None
 
     if tipo == "mes":
@@ -65,13 +66,11 @@ def obter_periodo(formulario):
             return None, None, "Informe um mês válido."
         return inicio, date(ano, mes, monthrange(ano, mes)[1]), None
 
-    inicio = converter_data(formulario.get("data_inicio"))
-    fim = converter_data(formulario.get("data_fim"))
-    if not inicio or not fim:
-        return None, None, "Informe as duas datas do período."
-    if inicio > fim:
-        return None, None, "A data inicial deve ser anterior à data final."
-    return inicio, fim, None
+    try:
+        ano = int(formulario.get("ano", ""))
+        return date(ano, 1, 1), date(ano, 12, 31), None
+    except (TypeError, ValueError):
+        return None, None, "Informe um ano válido."
 
 
 def buscar_registros(inicio, fim, ids_usuarios=None):
@@ -100,10 +99,12 @@ def buscar_registros(inicio, fim, ids_usuarios=None):
 
 
 def buscar_jornadas(ids_usuarios=None):
+    garantir_estrutura_jornada()
     consulta = """
         SELECT jornada.usuario_id, jornada.dia_semana,
                jornada.entrada, jornada.intervalo,
-               jornada.retorno_intervalo, jornada.saida
+               jornada.retorno_intervalo, jornada.saida,
+               usuario.quantidade_batidas
         FROM jornadas_usuarios AS jornada
         JOIN usuarios AS usuario ON usuario.id = jornada.usuario_id
         WHERE TRUE
@@ -120,8 +121,10 @@ def buscar_jornadas(ids_usuarios=None):
             registros = cursor.fetchall()
 
     jornadas = {}
-    for id_usuario, dia, entrada, intervalo, retorno, saida in registros:
-        jornadas.setdefault(id_usuario, {})[dia] = (entrada, intervalo, retorno, saida)
+    for id_usuario, dia, entrada, intervalo, retorno, saida, quantidade in registros:
+        jornadas.setdefault(id_usuario, {})[dia] = (
+            entrada, intervalo, retorno, saida, quantidade
+        )
     return jornadas
 
 
@@ -146,11 +149,14 @@ def calcular_totais(registros, jornadas, inicio, fim, ids_usuarios=None):
         ids |= ids_com_registros
 
     horas_trabalhadas = timedelta()
-    for eventos in batidas.values():
-        if eventos.get("Entrada") and eventos.get("Intervalo"):
-            horas_trabalhadas += eventos["Intervalo"] - eventos["Entrada"]
-        if eventos.get("Retorno intervalo") and eventos.get("Saída"):
-            horas_trabalhadas += eventos["Saída"] - eventos["Retorno intervalo"]
+    for (id_usuario, _), eventos in batidas.items():
+        if "Intervalo" in eventos or "Retorno intervalo" in eventos:
+            if eventos.get("Entrada") and eventos.get("Intervalo"):
+                horas_trabalhadas += eventos["Intervalo"] - eventos["Entrada"]
+            if eventos.get("Retorno intervalo") and eventos.get("Saída"):
+                horas_trabalhadas += eventos["Saída"] - eventos["Retorno intervalo"]
+        elif eventos.get("Entrada") and eventos.get("Saída"):
+            horas_trabalhadas += eventos["Saída"] - eventos["Entrada"]
 
     horas_pendentes = timedelta()
     dias_com_jornada = 0
@@ -163,14 +169,22 @@ def calcular_totais(registros, jornadas, inicio, fim, ids_usuarios=None):
             jornada = jornadas.get(id_usuario, {}).get(dia.weekday())
             if not jornada:
                 continue
-            entrada, intervalo, retorno, saida = jornada
-            esperado = duracao_horario(entrada, intervalo) + duracao_horario(retorno, saida)
+            entrada, intervalo, retorno, saida, quantidade = jornada
+            if quantidade == 2:
+                esperado = duracao_horario(entrada, saida)
+            elif intervalo and retorno:
+                esperado = duracao_horario(entrada, intervalo) + duracao_horario(retorno, saida)
+            else:
+                continue
             eventos = batidas.get((id_usuario, dia), {})
             realizado = timedelta()
-            if eventos.get("Entrada") and eventos.get("Intervalo"):
-                realizado += eventos["Intervalo"] - eventos["Entrada"]
-            if eventos.get("Retorno intervalo") and eventos.get("Saída"):
-                realizado += eventos["Saída"] - eventos["Retorno intervalo"]
+            if "Intervalo" in eventos or "Retorno intervalo" in eventos:
+                if eventos.get("Entrada") and eventos.get("Intervalo"):
+                    realizado += eventos["Intervalo"] - eventos["Entrada"]
+                if eventos.get("Retorno intervalo") and eventos.get("Saída"):
+                    realizado += eventos["Saída"] - eventos["Retorno intervalo"]
+            elif eventos.get("Entrada") and eventos.get("Saída"):
+                realizado = eventos["Saída"] - eventos["Entrada"]
             horas_pendentes += max(esperado - realizado, timedelta())
             dias_com_jornada += 1
 
@@ -183,19 +197,19 @@ def formatar_periodo(inicio, fim):
     return f"{inicio.strftime('%d/%m/%Y')} a {fim.strftime('%d/%m/%Y')}"
 
 
-def criar_planilha(registros, inicio, fim, tipo_batida, nome_colaborador, totais):
+def criar_planilha(registros, inicio, fim, nome_colaborador, totais):
     workbook = Workbook()
     planilha = workbook.active
     planilha.title = "Registros de ponto"
     planilha.sheet_view.showGridLines = False
-    planilha.merge_cells("A1:E1")
+    planilha.merge_cells("A1:F1")
     planilha["A1"] = "Relatório de ponto eletrônico"
     planilha["A1"].font = Font(name="Aptos Display", size=16, bold=True, color="FFFFFF")
     planilha["A1"].fill = PatternFill("solid", fgColor="24364B")
     planilha["A1"].alignment = Alignment(vertical="center")
     planilha.row_dimensions[1].height = 32
-    planilha.merge_cells("A2:E2")
-    planilha["A2"] = f"Colaborador: {nome_colaborador}  |  Período: {formatar_periodo(inicio, fim)}  |  Tipo: {tipo_batida}"
+    planilha.merge_cells("A2:F2")
+    planilha["A2"] = f"Colaborador: {nome_colaborador}  |  Período: {formatar_periodo(inicio, fim)}"
     planilha["A2"].font = Font(name="Aptos", size=10, color="425466")
 
     cabecalhos = ("Data", "Colaborador", "Permissão", "Tipo de ponto", "Horário")
@@ -206,7 +220,7 @@ def criar_planilha(registros, inicio, fim, tipo_batida, nome_colaborador, totais
         celula.fill = PatternFill("solid", fgColor="314B66")
         celula.alignment = Alignment(vertical="center")
 
-    linhas = [registro for registro in registros if tipo_batida == "Todas" or registro[4] == tipo_batida]
+    linhas = list(registros)
     for linha, registro in enumerate(linhas, start=linha_cabecalho + 1):
         _, nome, tipo_conta, dia, tipo, horario = registro
         horario_local = horario.astimezone(FUSO_HORARIO) if horario.tzinfo else horario
@@ -234,6 +248,7 @@ def criar_planilha(registros, inicio, fim, tipo_batida, nome_colaborador, totais
     planilha.column_dimensions["C"].width = 20
     planilha.column_dimensions["D"].width = 22
     planilha.column_dimensions["E"].width = 16
+    planilha.column_dimensions["F"].width = 16
 
     horas_trabalhadas, horas_pendentes, dias_com_jornada = totais
     linha_resumo = fim_tabela + 3
@@ -244,12 +259,50 @@ def criar_planilha(registros, inicio, fim, tipo_batida, nome_colaborador, totais
     planilha.cell(linha_resumo + 2, 1, "Horas pendentes")
     planilha.cell(linha_resumo + 2, 2, horas_pendentes.total_seconds() / 86400)
     planilha.cell(linha_resumo + 2, 2).number_format = "[h]:mm"
-    planilha.merge_cells(start_row=linha_resumo + 4, start_column=1, end_row=linha_resumo + 4, end_column=5)
+    planilha.merge_cells(start_row=linha_resumo + 4, start_column=1, end_row=linha_resumo + 4, end_column=6)
     planilha.cell(
         linha_resumo + 4,
         1,
         f"Horas pendentes baseadas nas jornadas cadastradas. Dias com jornada cadastrada no período: {dias_com_jornada}.",
     ).font = Font(size=9, italic=True, color="667788")
+
+    linha_assinaturas = linha_resumo + 7
+    grupos_assinatura = ((1, 2, "Diretora"), (3, 4, "Administração"), (5, 6, "Colaborador"))
+    for coluna_inicio, coluna_fim, funcao in grupos_assinatura:
+        planilha.merge_cells(
+            start_row=linha_assinaturas,
+            start_column=coluna_inicio,
+            end_row=linha_assinaturas,
+            end_column=coluna_fim,
+        )
+        planilha.merge_cells(
+            start_row=linha_assinaturas + 1,
+            start_column=coluna_inicio,
+            end_row=linha_assinaturas + 1,
+            end_column=coluna_fim,
+        )
+        linha_assinatura = planilha.cell(linha_assinaturas, coluna_inicio, " ")
+        linha_assinatura.border = Border(bottom=Side(style="thin", color="52647A"))
+        for coluna in range(coluna_inicio + 1, coluna_fim + 1):
+            planilha.cell(linha_assinaturas, coluna).border = Border(
+                bottom=Side(style="thin", color="52647A")
+            )
+        planilha.cell(linha_assinaturas + 1, coluna_inicio, funcao).alignment = Alignment(
+            horizontal="center", vertical="center"
+        )
+    planilha.row_dimensions[linha_assinaturas].height = 24
+    planilha.row_dimensions[linha_assinaturas + 1].height = 20
+
+    planilha.page_setup.paperSize = planilha.PAPERSIZE_A4
+    planilha.page_setup.orientation = "landscape"
+    planilha.page_setup.fitToWidth = 1
+    planilha.page_setup.fitToHeight = 0
+    planilha.sheet_properties.pageSetUpPr.fitToPage = True
+    planilha.page_margins.left = 0.3
+    planilha.page_margins.right = 0.3
+    planilha.page_margins.top = 0.5
+    planilha.page_margins.bottom = 0.5
+    planilha.print_area = f"A1:F{linha_assinaturas + 1}"
 
     arquivo = BytesIO()
     workbook.save(arquivo)
@@ -262,34 +315,22 @@ def dados_formulario(formulario):
         "periodo": formulario.get("periodo", "dia"),
         "data_referencia": formulario.get("data_referencia", ""),
         "mes": formulario.get("mes", ""),
-        "data_inicio": formulario.get("data_inicio", ""),
-        "data_fim": formulario.get("data_fim", ""),
-        "escopo": formulario.get("escopo", "sistema"),
-        "nome_manual": formulario.get("nome_manual", "").strip(),
-        "tipo_batida": formulario.get("tipo_batida", "Todas"),
+        "ano": formulario.get("ano", ""),
+        "escopo": formulario.get("escopo", "todos"),
     }
 
 
-def filtrar_colaboradores(colaboradores, escopo, nome_manual):
-    if nome_manual:
-        termo = nome_manual.casefold()
-        correspondentes = [
-            usuario for usuario in colaboradores if termo in usuario[1].casefold()
-        ]
-        return correspondentes, f"Pesquisa por nome: {nome_manual}"
-    if escopo in {"Professor", "Colaborador"}:
-        correspondentes = [usuario for usuario in colaboradores if usuario[2] == escopo]
-        return correspondentes, f"Todos: {escopo}"
-    if escopo == "sistema":
-        return colaboradores, "Todos do sistema"
-    if escopo.startswith("usuario:"):
-        try:
-            usuario_id = int(escopo.split(":", 1)[1])
-        except ValueError:
-            return [], ""
-        correspondentes = [usuario for usuario in colaboradores if usuario[0] == usuario_id]
-        return correspondentes, correspondentes[0][1] if correspondentes else ""
-    return None, ""
+def filtrar_colaboradores(colaboradores, escopo):
+    if escopo == "todos":
+        return colaboradores, "Todos os usuários"
+    if not escopo.startswith("usuario:"):
+        return None, ""
+    try:
+        usuario_id = int(escopo.split(":", 1)[1])
+    except ValueError:
+        return None, ""
+    selecionados = [usuario for usuario in colaboradores if usuario[0] == usuario_id]
+    return selecionados, selecionados[0][1] if selecionados else ""
 
 
 @rota_planilha.route("/planilha", methods=["GET", "POST"])
@@ -300,24 +341,19 @@ def exibir_planilha():
     if request.method == "POST":
         inicio, fim, erro = obter_periodo(request.form)
         escopo = campos["escopo"]
-        if escopo not in {"sistema", "Professor", "Colaborador"} and not escopo.startswith("usuario:"):
-            erro = "Selecione uma opção de colaborador válida."
-        tipo_batida = campos["tipo_batida"]
-        if tipo_batida not in {"Todas", *TIPOS_BATIDA}:
-            erro = "Selecione um tipo de ponto válido."
+        if escopo != "todos" and not escopo.startswith("usuario:"):
+            erro = "Selecione um usuário válido."
         if not erro:
             colaboradores = buscar_usuarios_exportacao()
-            colaboradores_filtrados, nome = filtrar_colaboradores(
-                colaboradores, escopo, campos["nome_manual"]
-            )
-            if not colaboradores_filtrados:
-                erro = "Nenhum usuário corresponde à seleção ou ao nome informado."
+            selecionados, nome = filtrar_colaboradores(colaboradores, escopo)
+            if not selecionados:
+                erro = "Nenhum usuário corresponde à seleção."
             else:
-                ids_usuarios = [colaborador[0] for colaborador in colaboradores_filtrados]
+                ids_usuarios = [usuario[0] for usuario in selecionados]
                 registros = buscar_registros(inicio, fim, ids_usuarios)
                 jornadas = buscar_jornadas(ids_usuarios)
                 totais = calcular_totais(registros, jornadas, inicio, fim, ids_usuarios)
-                arquivo = criar_planilha(registros, inicio, fim, tipo_batida, nome, totais)
+                arquivo = criar_planilha(registros, inicio, fim, nome, totais)
                 nome_arquivo = f"ponto_{inicio.isoformat()}_{fim.isoformat()}.xlsx"
                 return send_file(
                     arquivo,

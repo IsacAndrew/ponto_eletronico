@@ -5,6 +5,12 @@ ALTER TABLE usuarios
 ADD COLUMN IF NOT EXISTS deve_trocar_senha BOOLEAN NOT NULL DEFAULT FALSE;
 
 ALTER TABLE usuarios
+ADD COLUMN IF NOT EXISTS quantidade_batidas SMALLINT;
+
+ALTER TABLE usuarios
+ADD COLUMN IF NOT EXISTS dias_trabalho_semana SMALLINT;
+
+ALTER TABLE usuarios
 ALTER COLUMN email DROP NOT NULL,
 ALTER COLUMN telefone DROP NOT NULL;
 
@@ -41,11 +47,32 @@ CREATE TABLE IF NOT EXISTS jornadas_usuarios (
     usuario_id BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     dia_semana SMALLINT NOT NULL CHECK (dia_semana BETWEEN 0 AND 6),
     entrada TIME NOT NULL,
-    intervalo TIME NOT NULL,
-    retorno_intervalo TIME NOT NULL,
+    intervalo TIME,
+    retorno_intervalo TIME,
     saida TIME NOT NULL,
     PRIMARY KEY (usuario_id, dia_semana)
 );
+
+ALTER TABLE jornadas_usuarios
+ALTER COLUMN intervalo DROP NOT NULL,
+ALTER COLUMN retorno_intervalo DROP NOT NULL;
+
+UPDATE usuarios
+SET quantidade_batidas = CASE WHEN tipo_conta = 'Professor' THEN 2 ELSE 4 END
+WHERE quantidade_batidas IS NULL;
+
+UPDATE usuarios AS usuario
+SET dias_trabalho_semana = COALESCE(
+    NULLIF((SELECT COUNT(*) FROM jornadas_usuarios AS jornada
+            WHERE jornada.usuario_id = usuario.id), 0), 5
+)
+WHERE dias_trabalho_semana IS NULL;
+
+ALTER TABLE usuarios
+ALTER COLUMN quantidade_batidas SET DEFAULT 4,
+ALTER COLUMN quantidade_batidas SET NOT NULL,
+ALTER COLUMN dias_trabalho_semana SET DEFAULT 5,
+ALTER COLUMN dias_trabalho_semana SET NOT NULL;
 
 CREATE TABLE IF NOT EXISTS configuracoes_sistema (
     id SMALLINT PRIMARY KEY CHECK (id = 1),

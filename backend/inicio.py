@@ -7,6 +7,7 @@ from flask import Blueprint, jsonify, request, session
 from .permissoes import exigir_tipos_conta, renderizar_pagina
 from .banco_dados import criar_conexao
 from .localizacao import calcular_distancia_metros, obter_marco_zero
+from .jornada import garantir_estrutura_jornada
 
 rota_inicio = Blueprint("inicio", __name__)
 FUSO_HORARIO = ZoneInfo("America/Sao_Paulo")
@@ -67,13 +68,15 @@ def registrar_ponto():
     ):
         return jsonify(sucesso=False, mensagem="Não foi possível validar sua localização."), 400
 
+    garantir_estrutura_jornada()
     with criar_conexao() as conexao:
         with conexao.cursor() as cursor:
             cursor.execute(
-                "SELECT id FROM usuarios WHERE id = %s AND ativo = TRUE FOR UPDATE",
+                "SELECT id, quantidade_batidas FROM usuarios WHERE id = %s AND ativo = TRUE FOR UPDATE",
                 (usuario_id,),
             )
-            if not cursor.fetchone():
+            usuario = cursor.fetchone()
+            if not usuario:
                 session.clear()
                 return (
                     jsonify(
@@ -82,6 +85,7 @@ def registrar_ponto():
                     ),
                     401,
                 )
+            tipos_batida = ("Entrada", "Saída") if usuario[1] == 2 else TIPOS_BATIDA
 
             marco_zero = obter_marco_zero(conexao)
             latitude_marco, longitude_marco, _, raio_metros = marco_zero
@@ -121,10 +125,10 @@ def registrar_ponto():
             )
             quantidade_batidas, ultima_batida = cursor.fetchone()
 
-            if quantidade_batidas >= len(TIPOS_BATIDA):
+            if quantidade_batidas >= len(tipos_batida):
                 return jsonify(
                     sucesso=False,
-                    mensagem="As quatro batidas de hoje já foram registradas.",
+                    mensagem=f"As {len(tipos_batida)} batidas de hoje já foram registradas.",
                 ), 409
 
             if ultima_batida and agora - ultima_batida < timedelta(minutes=5):
@@ -133,7 +137,7 @@ def registrar_ponto():
                     mensagem="Aguarde pelo menos 5 minutos entre uma batida e outra.",
                 ), 409
 
-            tipo_batida = TIPOS_BATIDA[quantidade_batidas]
+            tipo_batida = tipos_batida[quantidade_batidas]
             cursor.execute(
                 """
                 INSERT INTO registros_ponto (

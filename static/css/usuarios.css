@@ -669,6 +669,16 @@
     align-items: center;
 }
 
+.campo-horario-quatro[hidden] {
+    display: none;
+}
+
+.resumo-dias-jornada {
+    margin: 10px 0;
+    color: #52647a;
+    font-size: .88rem;
+}
+
 .formulario-jornada .acoes-edicao {
     grid-column: 1 / -1;
 }
