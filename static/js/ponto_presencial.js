@@ -25,7 +25,7 @@
     function obterLocalizacao() {
         return new Promise((resolver, rejeitar) => {
             if (!navigator.geolocation) {
-                rejeitar(new Error("Este navegador não permite acessar a localização."));
+                rejeitar(criarErroLocalizacao("E08"));
                 return;
             }
 
@@ -36,12 +36,12 @@
                     precisao: posicao.coords.accuracy,
                 }),
                 (erro) => {
-                    const mensagens = {
-                        1: "Permita o acesso à localização para registrar seu ponto.",
-                        2: "Não foi possível obter sua localização. Verifique o GPS.",
-                        3: "A localização demorou. Tente novamente.",
+                    const codigos = {
+                        1: "E05",
+                        2: "E06",
+                        3: "E07",
                     };
-                    rejeitar(new Error(mensagens[erro.code] || "Não foi possível obter sua localização."));
+                    rejeitar(criarErroLocalizacao(codigos[erro.code] || "E06"));
                 },
                 { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
             );
@@ -64,15 +64,25 @@
             });
             const resultado = await resposta.json();
             if (!resposta.ok) {
-                throw new Error(resultado.mensagem || "Não foi possível registrar seu ponto.");
+                const erro = new Error(resultado.mensagem || "Não foi possível registrar seu ponto.");
+                erro.codigoErro = resultado.codigo_erro;
+                throw erro;
             }
             mensagem.textContent = resultado.mensagem;
             mensagem.dataset.estado = "sucesso";
         } catch (erro) {
-            mostrarErro(erro.message);
+            mostrarErro(erro.codigoErro
+                ? `Erro ${erro.codigoErro} - Informe o Isac sobre este código.`
+                : erro.message);
         } finally {
             tentativaEmAndamento = false;
         }
+    }
+
+    function criarErroLocalizacao(codigo) {
+        const erro = new Error(`Erro ${codigo} - Informe o Isac sobre este código.`);
+        erro.codigoErro = codigo;
+        return erro;
     }
 
     atualizarRelogio();

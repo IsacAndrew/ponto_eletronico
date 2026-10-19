@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from math import isfinite
 from zoneinfo import ZoneInfo
 
-from flask import Blueprint, jsonify, request, session
+from flask import Blueprint, current_app, jsonify, request, session
 
 from .permissoes import exigir_tipos_conta, renderizar_pagina
 from .banco_dados import criar_conexao
@@ -56,9 +56,11 @@ def registrar_ponto():
         longitude = float(dados_localizacao.get("longitude"))
         precisao = float(dados_localizacao.get("precisao"))
     except (TypeError, ValueError):
+        current_app.logger.warning("PONTO_E01: localização ausente ou inválida")
         return jsonify(
             sucesso=False,
-            mensagem="Ative a localização do dispositivo para registrar o ponto.",
+            codigo_erro="E01",
+            mensagem="Localização inválida. Informe o código E01 ao suporte.",
         ), 400
 
     if (
@@ -67,7 +69,12 @@ def registrar_ponto():
         or not -180 <= longitude <= 180
         or precisao <= 0
     ):
-        return jsonify(sucesso=False, mensagem="Não foi possível validar sua localização."), 400
+        current_app.logger.warning("PONTO_E01: coordenadas ou precisão fora do formato esperado")
+        return jsonify(
+            sucesso=False,
+            codigo_erro="E01",
+            mensagem="Não foi possível validar a localização. Informe o código E01 ao suporte.",
+        ), 400
 
     garantir_estrutura_jornada()
     garantir_estrutura_usuarios()
@@ -94,28 +101,40 @@ def registrar_ponto():
                 marco_zero = obter_marco_zero(conexao)
                 latitude_marco, longitude_marco, _, raio_metros = marco_zero
                 if latitude_marco is None or longitude_marco is None:
+                    current_app.logger.error("PONTO_E02: marco zero sem coordenadas")
                     return jsonify(
                         sucesso=False,
-                        mensagem="O marco zero ainda não foi configurado pelo suporte.",
+                        codigo_erro="E02",
+                        mensagem="Não foi possível validar o marco zero. Informe o código E02 ao suporte.",
                     ), 503
 
                 distancia = calcular_distancia_metros(
                     latitude, longitude, latitude_marco, longitude_marco
                 )
                 if distancia > raio_metros:
+                    current_app.logger.warning(
+                        "PONTO_E03: posição fora do raio (distância=%sm, raio=%sm)",
+                        round(distancia), raio_metros,
+                    )
                     return jsonify(
                         sucesso=False,
+                        codigo_erro="E03",
                         mensagem=(
-                            f"Ponto não registrado: você está a aproximadamente "
-                            f"{round(distancia)} m do marco zero. O limite é {raio_metros} m."
+                            "Ponto não registrado por localização fora do raio. "
+                            "Informe o código E03 ao suporte."
                         ),
                     ), 403
                 if distancia + precisao > raio_metros:
+                    current_app.logger.warning(
+                        "PONTO_E04: precisão insuficiente (distância=%sm, precisão=%sm, raio=%sm)",
+                        round(distancia), round(precisao), raio_metros,
+                    )
                     return jsonify(
                         sucesso=False,
+                        codigo_erro="E04",
                         mensagem=(
-                            "Não foi possível confirmar que você está dentro do raio permitido. "
-                            "Ative o GPS e tente novamente mais perto do marco zero."
+                            "Não foi possível confirmar sua localização. "
+                            "Ative a localização precisa e informe o código E04 ao suporte."
                         ),
                     ), 409
 

@@ -25,12 +25,14 @@ async function registrarPonto() {
         const resultado = await resposta.json();
 
         if (!resposta.ok) {
-            throw new Error(resultado.mensagem || "Não foi possível registrar o ponto.");
+            const erro = new Error(resultado.mensagem || "Não foi possível registrar o ponto.");
+            erro.codigoErro = resultado.codigo_erro;
+            throw erro;
         }
 
         ultimoRegistro.textContent = `Último registro: ${resultado.horario} / ${resultado.tipo_batida}`;
     } catch (erro) {
-        window.alert(erro.message);
+        window.alert(mensagemErroPonto(erro));
     } finally {
         botaoRegistrar.disabled = false;
     }
@@ -39,7 +41,7 @@ async function registrarPonto() {
 function obterLocalizacao() {
     return new Promise((resolver, rejeitar) => {
         if (!navigator.geolocation) {
-            rejeitar(new Error("Este navegador não oferece acesso à localização."));
+            rejeitar(criarErroLocalizacao("E08"));
             return;
         }
 
@@ -50,16 +52,28 @@ function obterLocalizacao() {
                 precisao: posicao.coords.accuracy,
             }),
             (erro) => {
-                const mensagens = {
-                    1: "Permita o acesso à localização para registrar o ponto.",
-                    2: "Não foi possível determinar sua localização. Verifique o GPS e tente novamente.",
-                    3: "A localização demorou demais. Tente novamente.",
+                const codigos = {
+                    1: "E05",
+                    2: "E06",
+                    3: "E07",
                 };
-                rejeitar(new Error(mensagens[erro.code] || "Falha ao obter sua localização."));
+                rejeitar(criarErroLocalizacao(codigos[erro.code] || "E06"));
             },
             { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
         );
     });
+}
+
+function criarErroLocalizacao(codigo) {
+    const erro = new Error(`Erro ${codigo} - Informe o Isac sobre este código.`);
+    erro.codigoErro = codigo;
+    return erro;
+}
+
+function mensagemErroPonto(erro) {
+    return erro.codigoErro
+        ? `Erro ${erro.codigoErro} - Informe o Isac sobre este código.`
+        : erro.message;
 }
 
 atualizarRelogio();
