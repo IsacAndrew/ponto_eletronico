@@ -11,6 +11,16 @@ ALTER TABLE usuarios
 ADD COLUMN IF NOT EXISTS dias_trabalho_semana SMALLINT;
 
 ALTER TABLE usuarios
+ADD COLUMN IF NOT EXISTS registro_fora_unidade BOOLEAN NOT NULL DEFAULT FALSE;
+
+CREATE UNIQUE INDEX IF NOT EXISTS usuarios_login_normalizado_uidx
+ON usuarios (LOWER(BTRIM(login)));
+
+CREATE UNIQUE INDEX IF NOT EXISTS usuarios_email_normalizado_uidx
+ON usuarios (LOWER(BTRIM(email)))
+WHERE email IS NOT NULL AND BTRIM(email) <> '';
+
+ALTER TABLE usuarios
 ALTER COLUMN email DROP NOT NULL,
 ALTER COLUMN telefone DROP NOT NULL;
 

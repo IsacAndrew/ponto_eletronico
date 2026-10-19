@@ -2,11 +2,13 @@ import re
 from datetime import time
 from threading import Lock
 
-from flask import Blueprint, redirect, request, session, url_for
+from flask import Blueprint, g, redirect, request, session, url_for
+from psycopg.errors import UniqueViolation
 from werkzeug.security import generate_password_hash
 
 from .banco_dados import criar_conexao
 from .jornada import garantir_estrutura_jornada
+from .estrutura_usuarios import garantir_estrutura_usuarios
 from .ponto_qr import revogar_dispositivos_usuario
 from .permissoes import exigir_tipos_conta, renderizar_pagina
 
@@ -60,11 +62,12 @@ def buscar_usuarios(filtro, busca):
 
 def buscar_usuario(usuario_id):
     garantir_estrutura_jornada()
+    garantir_estrutura_usuarios()
     with criar_conexao() as conexao:
         usuario = conexao.execute(
             """
             SELECT id, nome_completo, login, email, telefone, tipo_conta, ativo,
-                   quantidade_batidas, dias_trabalho_semana
+                   quantidade_batidas, dias_trabalho_semana, registro_fora_unidade
             FROM usuarios
             WHERE id = %s
             """,
@@ -79,6 +82,7 @@ def buscar_usuario(usuario_id):
             (
                 "id", "nome_completo", "login", "email", "telefone", "tipo_conta",
                 "ativo", "quantidade_batidas", "dias_trabalho_semana",
+                "registro_fora_unidade",
             ),
             usuario,
         )
@@ -207,26 +211,19 @@ def garantir_campos_opcionais_usuario():
 
 
 def buscar_conflito_usuario(usuario_id, login, email):
-    if not email:
-        with criar_conexao() as conexao:
-            if usuario_id is None:
-                return conexao.execute(
-                    "SELECT id FROM usuarios WHERE login = %s LIMIT 1", (login,)
-                ).fetchone()
-            return conexao.execute(
-                "SELECT id FROM usuarios WHERE id <> %s AND login = %s LIMIT 1",
-                (usuario_id, login),
-            ).fetchone()
+    consulta = """
+        SELECT id FROM usuarios
+        WHERE (LOWER(BTRIM(login)) = LOWER(BTRIM(%s))
+           OR (%s::text IS NOT NULL AND LOWER(BTRIM(email)) = LOWER(BTRIM(%s::text))))
+    """
+    parametros = [login, email, email]
+    if usuario_id is not None:
+        consulta += " AND id <> %s"
+        parametros.append(usuario_id)
+    consulta += " LIMIT 1"
     with criar_conexao() as conexao:
-        if usuario_id is None:
-            return conexao.execute(
-                "SELECT id FROM usuarios WHERE login = %s OR email = %s LIMIT 1",
-                (login, email),
-            ).fetchone()
-        return conexao.execute(
-            "SELECT id FROM usuarios WHERE id <> %s AND (login = %s OR email = %s) LIMIT 1",
-            (usuario_id, login, email),
-        ).fetchone()
+        return conexao.execute(consulta, parametros).fetchone()
+
 
 
 def buscar_outro_suporte(usuario_id):
@@ -254,6 +251,7 @@ def adicionar_usuario():
         "tipo_conta": "",
     }
 
+    garantir_estrutura_usuarios()
     if request.method == "GET":
         return renderizar_lista_usuarios(filtro, busca, usuario_novo=usuario_novo)
 
@@ -269,7 +267,7 @@ def adicionar_usuario():
             filtro,
             busca,
             usuario_novo=usuario_novo,
-            erro_novo="Esse login ou email já está sendo usado por outro usuário.",
+            erro_novo="Esse usuário já existe. Confira o login e o email informados.",
         )
 
     if dados["tipo_conta"] == "Suporte" and buscar_outro_suporte(None):
@@ -282,24 +280,32 @@ def adicionar_usuario():
 
     garantir_campos_opcionais_usuario()
     garantir_estrutura_jornada()
-    with criar_conexao() as conexao:
-        conexao.execute(
-            """
-            INSERT INTO usuarios (
-                nome_completo, login, email, telefone, tipo_conta, senha_hash,
-                ativo, deve_trocar_senha, quantidade_batidas, dias_trabalho_semana
+    try:
+        with criar_conexao() as conexao:
+            conexao.execute(
+                """
+                INSERT INTO usuarios (
+                    nome_completo, login, email, telefone, tipo_conta, senha_hash,
+                    ativo, deve_trocar_senha, quantidade_batidas, dias_trabalho_semana
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, TRUE, TRUE, %s, 5)
+                """,
+                (
+                    dados["nome_completo"],
+                    dados["login"],
+                    dados["email"],
+                    dados["telefone"],
+                    dados["tipo_conta"],
+                    generate_password_hash("102030"),
+                    2 if dados["tipo_conta"] == "Professor" else 4,
+                ),
             )
-            VALUES (%s, %s, %s, %s, %s, %s, TRUE, TRUE, %s, 5)
-            """,
-            (
-                dados["nome_completo"],
-                dados["login"],
-                dados["email"],
-                dados["telefone"],
-                dados["tipo_conta"],
-                generate_password_hash("102030"),
-                2 if dados["tipo_conta"] == "Professor" else 4,
-            ),
+    except UniqueViolation:
+        return renderizar_lista_usuarios(
+            filtro,
+            busca,
+            usuario_novo=usuario_novo,
+            erro_novo="Esse usuário já existe. Confira o login e o email informados.",
         )
 
     return redirect(
@@ -337,7 +343,18 @@ def editar_usuario(usuario_id):
     if request.method == "POST":
         dados, erro = validar_dados_usuario(request.form)
         ativo = request.form.get("ativo") == "on"
-        dados_edicao = {**usuario, **request.form, "ativo": ativo}
+        suporte_real = g.tipo_conta_real == "Suporte" and not g.modo_visualizacao
+        registro_fora_unidade = (
+            request.form.get("registro_fora_unidade") == "on"
+            if suporte_real
+            else usuario["registro_fora_unidade"]
+        )
+        dados_edicao = {
+            **usuario,
+            **request.form,
+            "ativo": ativo,
+            "registro_fora_unidade": registro_fora_unidade,
+        }
 
         if erro:
             return renderizar_lista_usuarios(
@@ -352,7 +369,7 @@ def editar_usuario(usuario_id):
                 filtro,
                 busca,
                 usuario_edicao=dados_edicao,
-                erro_edicao="Esse login ou email já está sendo usado por outro usuário.",
+                erro_edicao="Esse usuário já existe. Confira o login e o email informados.",
             )
 
         if dados["tipo_conta"] == "Suporte" and buscar_outro_suporte(usuario_id):
@@ -363,30 +380,40 @@ def editar_usuario(usuario_id):
                 erro_edicao="Já existe uma conta com a permissão Suporte.",
             )
 
-        with criar_conexao() as conexao:
-            conexao.execute(
-                """
-                UPDATE usuarios
-                SET nome_completo = %s,
-                    login = %s,
-                    email = %s,
-                    telefone = %s,
-                    tipo_conta = %s,
-                    ativo = %s
-                WHERE id = %s
-                """,
-                (
-                    dados["nome_completo"],
-                    dados["login"],
-                    dados["email"],
-                    dados["telefone"],
-                    dados["tipo_conta"],
-                    ativo,
-                    usuario_id,
-                ),
+        try:
+            with criar_conexao() as conexao:
+                conexao.execute(
+                    """
+                    UPDATE usuarios
+                    SET nome_completo = %s,
+                        login = %s,
+                        email = %s,
+                        telefone = %s,
+                        tipo_conta = %s,
+                        ativo = %s,
+                        registro_fora_unidade = %s
+                    WHERE id = %s
+                    """,
+                    (
+                        dados["nome_completo"],
+                        dados["login"],
+                        dados["email"],
+                        dados["telefone"],
+                        dados["tipo_conta"],
+                        ativo,
+                        registro_fora_unidade,
+                        usuario_id,
+                    ),
+                )
+                if not ativo:
+                    revogar_dispositivos_usuario(conexao, usuario_id)
+        except UniqueViolation:
+            return renderizar_lista_usuarios(
+                filtro,
+                busca,
+                usuario_edicao=dados_edicao,
+                erro_edicao="Esse usuário já existe. Confira o login e o email informados.",
             )
-            if not ativo:
-                revogar_dispositivos_usuario(conexao, usuario_id)
 
     return redirect(url_for("usuarios.exibir_usuarios", filtro=filtro, busca=busca))
 

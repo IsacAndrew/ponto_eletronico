@@ -8,6 +8,7 @@ from .permissoes import exigir_tipos_conta, renderizar_pagina
 from .banco_dados import criar_conexao
 from .localizacao import calcular_distancia_metros, obter_marco_zero
 from .jornada import garantir_estrutura_jornada
+from .estrutura_usuarios import garantir_estrutura_usuarios
 
 rota_inicio = Blueprint("inicio", __name__)
 FUSO_HORARIO = ZoneInfo("America/Sao_Paulo")
@@ -69,10 +70,12 @@ def registrar_ponto():
         return jsonify(sucesso=False, mensagem="Não foi possível validar sua localização."), 400
 
     garantir_estrutura_jornada()
+    garantir_estrutura_usuarios()
     with criar_conexao() as conexao:
         with conexao.cursor() as cursor:
             cursor.execute(
-                "SELECT id, quantidade_batidas FROM usuarios WHERE id = %s AND ativo = TRUE FOR UPDATE",
+                """SELECT id, quantidade_batidas, registro_fora_unidade
+                   FROM usuarios WHERE id = %s AND ativo = TRUE FOR UPDATE""",
                 (usuario_id,),
             )
             usuario = cursor.fetchone()
@@ -87,33 +90,34 @@ def registrar_ponto():
                 )
             tipos_batida = ("Entrada", "Saída") if usuario[1] == 2 else TIPOS_BATIDA
 
-            marco_zero = obter_marco_zero(conexao)
-            latitude_marco, longitude_marco, _, raio_metros = marco_zero
-            if latitude_marco is None or longitude_marco is None:
-                return jsonify(
-                    sucesso=False,
-                    mensagem="O marco zero ainda não foi configurado pelo suporte.",
-                ), 503
+            if not usuario[2]:
+                marco_zero = obter_marco_zero(conexao)
+                latitude_marco, longitude_marco, _, raio_metros = marco_zero
+                if latitude_marco is None or longitude_marco is None:
+                    return jsonify(
+                        sucesso=False,
+                        mensagem="O marco zero ainda não foi configurado pelo suporte.",
+                    ), 503
 
-            distancia = calcular_distancia_metros(
-                latitude, longitude, latitude_marco, longitude_marco
-            )
-            if distancia > raio_metros:
-                return jsonify(
-                    sucesso=False,
-                    mensagem=(
-                        f"Ponto não registrado: você está a aproximadamente "
-                        f"{round(distancia)} m do marco zero. O limite é {raio_metros} m."
-                    ),
-                ), 403
-            if distancia + precisao > raio_metros:
-                return jsonify(
-                    sucesso=False,
-                    mensagem=(
-                        "Não foi possível confirmar que você está dentro do raio permitido. "
-                        "Ative o GPS e tente novamente mais perto do marco zero."
-                    ),
-                ), 409
+                distancia = calcular_distancia_metros(
+                    latitude, longitude, latitude_marco, longitude_marco
+                )
+                if distancia > raio_metros:
+                    return jsonify(
+                        sucesso=False,
+                        mensagem=(
+                            f"Ponto não registrado: você está a aproximadamente "
+                            f"{round(distancia)} m do marco zero. O limite é {raio_metros} m."
+                        ),
+                    ), 403
+                if distancia + precisao > raio_metros:
+                    return jsonify(
+                        sucesso=False,
+                        mensagem=(
+                            "Não foi possível confirmar que você está dentro do raio permitido. "
+                            "Ative o GPS e tente novamente mais perto do marco zero."
+                        ),
+                    ), 409
 
             cursor.execute(
                 """

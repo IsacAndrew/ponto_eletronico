@@ -191,6 +191,14 @@
                         {% endfor %}
                     </select>
 
+                    {% if conta_suporte and not modo_visualizacao %}
+                        <label class="campo-ativo" for="registro-fora-unidade">
+                            <input id="registro-fora-unidade" name="registro_fora_unidade" type="checkbox" {% if usuario_edicao.registro_fora_unidade %}checked{% endif %}>
+                            <span>Registro fora da unidade</span>
+                        </label>
+                        <small class="ajuda-registro-fora">Permite que este usuário registre o ponto fora do raio do marco zero.</small>
+                    {% endif %}
+
                     <label class="campo-ativo" for="usuario-ativo">
                         <input id="usuario-ativo" name="ativo" type="checkbox" {% if usuario_edicao.ativo == true or usuario_edicao.ativo == 'on' %}checked{% endif %}>
                         <span>Acesso ativo</span>
