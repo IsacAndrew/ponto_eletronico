@@ -1,12 +1,13 @@
 from calendar import monthrange
+from collections import defaultdict
+from copy import copy
 from datetime import date, datetime, timedelta
 from io import BytesIO
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from flask import Blueprint, request, send_file
-from openpyxl import Workbook
-from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
-from openpyxl.worksheet.table import Table, TableStyleInfo
+from openpyxl import load_workbook
 
 from .banco_dados import criar_conexao
 from .estrutura_registros import garantir_indices_registros
@@ -19,11 +20,10 @@ TIPOS_PERIODO = {"dia", "semana", "mes", "ano"}
 
 
 def buscar_usuarios_exportacao():
-    garantir_estrutura_jornada()
     with criar_conexao() as conexao:
         return conexao.execute(
             """
-            SELECT id, nome_completo, tipo_conta, quantidade_batidas, dias_trabalho_semana
+            SELECT id, nome_completo, tipo_conta, ativo
             FROM usuarios
             ORDER BY nome_completo
             """
@@ -137,182 +137,106 @@ def buscar_jornadas(ids_usuarios=None):
     return jornadas
 
 
-def duracao_horario(inicio, fim):
-    duracao = datetime.combine(date.min, fim) - datetime.combine(date.min, inicio)
-    return duracao if duracao >= timedelta() else duracao + timedelta(days=1)
+DIAS_SEMANA = ("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")
+MESES = (
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+)
 
 
-def calcular_totais(registros, jornadas, inicio, fim, ids_usuarios=None):
-    batidas = {}
-    ids_com_registros = set()
-    for id_usuario, nome, tipo_conta, dia, tipo, registrado_em in registros:
-        if id_usuario is None:
-            continue
-        batidas.setdefault((id_usuario, dia), {})[tipo] = registrado_em
-        ids_com_registros.add(id_usuario)
+def iterar_meses(inicio, fim):
+    ano, mes = inicio.year, inicio.month
+    while (ano, mes) <= (fim.year, fim.month):
+        primeiro_dia = date(ano, mes, 1)
+        ultimo_dia = date(ano, mes, monthrange(ano, mes)[1])
+        yield primeiro_dia, ultimo_dia
+        mes += 1
+        if mes > 12:
+            mes = 1
+            ano += 1
 
-    ids = {id_usuario for id_usuario in jornadas}
-    if ids_usuarios is not None:
-        ids = set(ids_usuarios)
-    else:
-        ids |= ids_com_registros
 
-    horas_trabalhadas = timedelta()
-    for (id_usuario, _), eventos in batidas.items():
-        if "Intervalo" in eventos or "Retorno intervalo" in eventos:
-            if eventos.get("Entrada") and eventos.get("Intervalo"):
-                horas_trabalhadas += eventos["Intervalo"] - eventos["Entrada"]
-            if eventos.get("Retorno intervalo") and eventos.get("Saída"):
-                horas_trabalhadas += eventos["Saída"] - eventos["Retorno intervalo"]
-        elif eventos.get("Entrada") and eventos.get("Saída"):
-            horas_trabalhadas += eventos["Saída"] - eventos["Entrada"]
+def nome_aba_unico(nome, inicio_mes, titulos_existentes):
+    base = f"{nome} {inicio_mes.month:02d}-{inicio_mes.year}"
+    base = "".join("_" if caractere in "[]:*?/\\" else caractere for caractere in base)
+    base = base.strip("'") or "Folha de Frequência"
+    titulo = base[:31]
+    contador = 2
+    while titulo in titulos_existentes:
+        sufixo = f" ({contador})"
+        titulo = f"{base[:31 - len(sufixo)]}{sufixo}"
+        contador += 1
+    return titulo
 
-    horas_pendentes = timedelta()
-    dias_com_jornada = 0
+
+def preencher_folha(planilha, usuario, jornada, presencas, inicio, fim, inicio_mes):
+    id_usuario, nome, tipo_conta, ativo = usuario
+    planilha["C2"] = nome
+    planilha["D3"] = "Ativo" if ativo else "Inativo"
+    planilha["J3"] = tipo_conta
+    planilha["U5"] = f"{MESES[inicio_mes.month - 1]} / {inicio_mes.year}"
+
+    dias_jornada = sorted(jornada)
+    if dias_jornada:
+        planilha["R3"] = ", ".join(DIAS_SEMANA[dia] for dia in dias_jornada)
+
+    dias_com_presenca = presencas.get(id_usuario, set())
     hoje = datetime.now(FUSO_HORARIO).date()
-    for id_usuario in ids:
-        for numero_dia in range((fim - inicio).days + 1):
-            dia = inicio + timedelta(days=numero_dia)
-            if dia > hoje:
-                continue
-            jornada = jornadas.get(id_usuario, {}).get(dia.weekday())
-            if not jornada:
-                continue
-            entrada, intervalo, retorno, saida, quantidade = jornada
-            if quantidade == 2:
-                esperado = duracao_horario(entrada, saida)
-            elif intervalo and retorno:
-                esperado = duracao_horario(entrada, intervalo) + duracao_horario(retorno, saida)
-            else:
-                continue
-            eventos = batidas.get((id_usuario, dia), {})
-            realizado = timedelta()
-            if "Intervalo" in eventos or "Retorno intervalo" in eventos:
-                if eventos.get("Entrada") and eventos.get("Intervalo"):
-                    realizado += eventos["Intervalo"] - eventos["Entrada"]
-                if eventos.get("Retorno intervalo") and eventos.get("Saída"):
-                    realizado += eventos["Saída"] - eventos["Retorno intervalo"]
-            elif eventos.get("Entrada") and eventos.get("Saída"):
-                realizado = eventos["Saída"] - eventos["Entrada"]
-            horas_pendentes += max(esperado - realizado, timedelta())
-            dias_com_jornada += 1
+    total_dias_mes = monthrange(inicio_mes.year, inicio_mes.month)[1]
+    for numero_dia in range(1, 32):
+        linha = 11 + numero_dia
+        if numero_dia > total_dias_mes:
+            planilha.row_dimensions[linha].hidden = True
+            continue
+        dia = date(inicio_mes.year, inicio_mes.month, numero_dia)
+        planilha.cell(linha, 8, DIAS_SEMANA[dia.weekday()])
+        if dia < inicio or dia > fim:
+            continue
+        if dia in dias_com_presenca:
+            planilha.cell(linha, 1, nome)
+        elif ativo and dia <= hoje and dia.weekday() in jornada:
+            planilha.cell(linha, 1, "Ausente")
 
-    return horas_trabalhadas, horas_pendentes, dias_com_jornada
+    for celula in (planilha["C2"], planilha["D3"], planilha["J3"], planilha["R3"], planilha["U5"]):
+        alinhamento = copy(celula.alignment)
+        alinhamento.shrink_to_fit = True
+        celula.alignment = alinhamento
 
-
-def formatar_periodo(inicio, fim):
-    if inicio == fim:
-        return inicio.strftime("%d/%m/%Y")
-    return f"{inicio.strftime('%d/%m/%Y')} a {fim.strftime('%d/%m/%Y')}"
-
-
-def criar_planilha(registros, inicio, fim, nome_colaborador, totais):
-    workbook = Workbook()
-    planilha = workbook.active
-    planilha.title = "Registros de ponto"
     planilha.sheet_view.showGridLines = False
-    planilha.merge_cells("A1:F1")
-    planilha["A1"] = "Relatório de ponto eletrônico"
-    planilha["A1"].font = Font(name="Aptos Display", size=16, bold=True, color="FFFFFF")
-    planilha["A1"].fill = PatternFill("solid", fgColor="24364B")
-    planilha["A1"].alignment = Alignment(vertical="center")
-    planilha.row_dimensions[1].height = 32
-    planilha.merge_cells("A2:F2")
-    planilha["A2"] = f"Colaborador: {nome_colaborador}  |  Período: {formatar_periodo(inicio, fim)}"
-    planilha["A2"].font = Font(name="Aptos", size=10, color="425466")
-
-    cabecalhos = ("Data", "Colaborador", "Permissão", "Tipo de ponto", "Horário")
-    linha_cabecalho = 4
-    for coluna, titulo in enumerate(cabecalhos, start=1):
-        celula = planilha.cell(linha_cabecalho, coluna, titulo)
-        celula.font = Font(bold=True, color="FFFFFF")
-        celula.fill = PatternFill("solid", fgColor="314B66")
-        celula.alignment = Alignment(vertical="center")
-
-    linhas = list(registros)
-    for linha, registro in enumerate(linhas, start=linha_cabecalho + 1):
-        _, nome, tipo_conta, dia, tipo, horario = registro
-        horario_local = horario.astimezone(FUSO_HORARIO) if horario.tzinfo else horario
-        valores = (dia, nome, tipo_conta, tipo, horario_local.replace(tzinfo=None))
-        for coluna, valor in enumerate(valores, start=1):
-            celula = planilha.cell(linha, coluna, valor)
-            if linha % 2:
-                celula.fill = PatternFill("solid", fgColor="F1F5F4")
-        planilha.cell(linha, 1).number_format = "dd/mm/yyyy"
-        planilha.cell(linha, 5).number_format = "hh:mm:ss"
-
-    fim_tabela = max(linha_cabecalho, linha_cabecalho + len(linhas))
-    if linhas:
-        tabela = Table(displayName="RegistrosPonto", ref=f"A{linha_cabecalho}:E{fim_tabela}")
-        tabela.tableStyleInfo = TableStyleInfo(
-            name="TableStyleMedium2", showFirstColumn=False,
-            showLastColumn=False, showRowStripes=True, showColumnStripes=False,
-        )
-        planilha.add_table(tabela)
-    else:
-        planilha.auto_filter.ref = f"A{linha_cabecalho}:E{fim_tabela}"
-    planilha.freeze_panes = "A5"
-    planilha.column_dimensions["A"].width = 14
-    planilha.column_dimensions["B"].width = 34
-    planilha.column_dimensions["C"].width = 20
-    planilha.column_dimensions["D"].width = 22
-    planilha.column_dimensions["E"].width = 16
-    planilha.column_dimensions["F"].width = 16
-
-    horas_trabalhadas, horas_pendentes, dias_com_jornada = totais
-    linha_resumo = fim_tabela + 3
-    planilha.cell(linha_resumo, 1, "Resumo do período").font = Font(bold=True, color="24364B", size=12)
-    planilha.cell(linha_resumo + 1, 1, "Horas trabalhadas")
-    planilha.cell(linha_resumo + 1, 2, horas_trabalhadas.total_seconds() / 86400)
-    planilha.cell(linha_resumo + 1, 2).number_format = "[h]:mm"
-    planilha.cell(linha_resumo + 2, 1, "Horas pendentes")
-    planilha.cell(linha_resumo + 2, 2, horas_pendentes.total_seconds() / 86400)
-    planilha.cell(linha_resumo + 2, 2).number_format = "[h]:mm"
-    planilha.merge_cells(start_row=linha_resumo + 4, start_column=1, end_row=linha_resumo + 4, end_column=6)
-    planilha.cell(
-        linha_resumo + 4,
-        1,
-        f"Horas pendentes baseadas nas jornadas cadastradas. Dias com jornada cadastrada no período: {dias_com_jornada}.",
-    ).font = Font(size=9, italic=True, color="667788")
-
-    linha_assinaturas = linha_resumo + 7
-    grupos_assinatura = ((1, 2, "Diretora"), (3, 4, "Administração"), (5, 6, "Colaborador"))
-    for coluna_inicio, coluna_fim, funcao in grupos_assinatura:
-        planilha.merge_cells(
-            start_row=linha_assinaturas,
-            start_column=coluna_inicio,
-            end_row=linha_assinaturas,
-            end_column=coluna_fim,
-        )
-        planilha.merge_cells(
-            start_row=linha_assinaturas + 1,
-            start_column=coluna_inicio,
-            end_row=linha_assinaturas + 1,
-            end_column=coluna_fim,
-        )
-        linha_assinatura = planilha.cell(linha_assinaturas, coluna_inicio, " ")
-        linha_assinatura.border = Border(bottom=Side(style="thin", color="52647A"))
-        for coluna in range(coluna_inicio + 1, coluna_fim + 1):
-            planilha.cell(linha_assinaturas, coluna).border = Border(
-                bottom=Side(style="thin", color="52647A")
-            )
-        planilha.cell(linha_assinaturas + 1, coluna_inicio, funcao).alignment = Alignment(
-            horizontal="center", vertical="center"
-        )
-    planilha.row_dimensions[linha_assinaturas].height = 24
-    planilha.row_dimensions[linha_assinaturas + 1].height = 20
-
-    planilha.page_setup.paperSize = planilha.PAPERSIZE_A4
-    planilha.page_setup.orientation = "landscape"
+    planilha.print_area = "A1:Z45"
     planilha.page_setup.fitToWidth = 1
-    planilha.page_setup.fitToHeight = 0
+    planilha.page_setup.fitToHeight = 1
     planilha.sheet_properties.pageSetUpPr.fitToPage = True
-    planilha.page_margins.left = 0.3
-    planilha.page_margins.right = 0.3
-    planilha.page_margins.top = 0.5
-    planilha.page_margins.bottom = 0.5
-    planilha.print_area = f"A1:F{linha_assinaturas + 1}"
 
+
+def criar_planilha(registros, jornadas, usuarios, inicio, fim):
+    caminho_modelo = Path(__file__).resolve().parent / "modelos" / "xlsc_base.xlsx"
+    workbook = load_workbook(caminho_modelo)
+    modelo = workbook.active
+    titulos_existentes = set()
+    presencas = defaultdict(set)
+    for registro in registros:
+        if registro[0] is not None:
+            presencas[registro[0]].add(registro[3])
+
+    for usuario in usuarios:
+        id_usuario = usuario[0]
+        jornada_usuario = jornadas.get(id_usuario, {})
+        for inicio_mes, fim_mes in iterar_meses(inicio, fim):
+            planilha = workbook.copy_worksheet(modelo)
+            planilha.title = nome_aba_unico(usuario[1], inicio_mes, titulos_existentes)
+            titulos_existentes.add(planilha.title)
+            preencher_folha(
+                planilha,
+                usuario,
+                jornada_usuario,
+                presencas,
+                max(inicio, inicio_mes),
+                min(fim, fim_mes),
+                inicio_mes,
+            )
+
+    workbook.remove(modelo)
     arquivo = BytesIO()
     workbook.save(arquivo)
     arquivo.seek(0)
@@ -364,15 +288,14 @@ def exibir_planilha():
             erro = "Selecione ao menos um usuário ou todos os usuários."
         if not erro:
             colaboradores = buscar_usuarios_exportacao()
-            selecionados, nome = filtrar_colaboradores(colaboradores, escopos)
+            selecionados, _ = filtrar_colaboradores(colaboradores, escopos)
             if not selecionados:
                 erro = "Nenhum usuário corresponde à seleção."
             else:
                 ids_usuarios = [usuario[0] for usuario in selecionados]
                 registros = buscar_registros(inicio, fim, ids_usuarios)
                 jornadas = buscar_jornadas(ids_usuarios)
-                totais = calcular_totais(registros, jornadas, inicio, fim, ids_usuarios)
-                arquivo = criar_planilha(registros, inicio, fim, nome, totais)
+                arquivo = criar_planilha(registros, jornadas, selecionados, inicio, fim)
                 nome_arquivo = f"ponto_{inicio.isoformat()}_{fim.isoformat()}.xlsx"
                 return send_file(
                     arquivo,
