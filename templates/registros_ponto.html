@@ -28,7 +28,7 @@
 
             <form class="filtros-registros-ponto" method="get" action="{{ url_for('configuracoes.exibir_registros_ponto') }}">
                 <label>Nome<input name="nome" value="{{ filtros_registros.nome }}" placeholder="Nome do professor"></label>
-                <label>Data<input name="data" type="date" value="{{ filtros_registros.data }}"></label>
+                <label>Data<input name="data" type="text" inputmode="numeric" placeholder="DD/MM/AAAA" pattern="[0-9]{2}/[0-9]{2}/[0-9]{4}" value="{{ data_filtro_exibicao }}" aria-label="Filtrar por data no formato dia, mês e ano"></label>
                 <label>Login<input name="login" value="{{ filtros_registros.login }}" placeholder="Login do usuário"></label>
                 <label>Email<input name="email" type="email" value="{{ filtros_registros.email }}" placeholder="Email do usuário"></label>
                 <div class="acoes-filtro-registros">
@@ -57,7 +57,7 @@
                                         {% for tipo in tipos_batida %}<option value="{{ tipo }}" {% if registro[4] == tipo %}selected{% endif %}>{{ tipo }}</option>{% endfor %}
                                     </select>
                                 </td>
-                                <td data-label="Data e horário"><input form="editar-registro-{{ registro[0] }}" name="registrado_em" type="datetime-local" step="60" value="{{ registro[5] }}" required aria-label="Data e horário da batida de {{ registro[1] }}"></td>
+                                <td data-label="Data e horário"><input form="editar-registro-{{ registro[0] }}" name="registrado_em" type="text" inputmode="numeric" placeholder="DD/MM/AAAA HH:MM" pattern="[0-9]{2}/[0-9]{2}/[0-9]{4} [0-9]{2}:[0-9]{2}" value="{{ registro[5] }}" required aria-label="Data e horário da batida de {{ registro[1] }} no formato dia, mês, ano e hora"></td>
                                 <td class="acoes-registro" data-label="Ações">
                                     <button class="botao-salvar-registro" type="submit" form="editar-registro-{{ registro[0] }}">Salvar</button>
                                     <form method="post" action="{{ url_for('configuracoes.excluir_registro_ponto', registro_id=registro[0]) }}" onsubmit="return window.confirm('Excluir esta batida de ponto?');">

@@ -45,7 +45,7 @@
     .tabela-registros-ponto { overflow: visible; border: 0; background: transparent; }
     .tabela-registros-ponto table, .tabela-registros-ponto tbody { display: block; }
     .tabela-registros-ponto thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
-    .tabela-registros-ponto tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; margin-bottom: 10px; padding: 12px; border: 1px solid #dbe3ec; border-radius: 11px; background: #fff; }
+    .tabela-registros-ponto tr { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin-bottom: 10px; padding: 12px; border: 1px solid #dbe3ec; border-radius: 11px; background: #fff; }
     .tabela-registros-ponto td { display: grid; min-width: 0; gap: 5px; padding: 0; border: 0; }
     .tabela-registros-ponto td::before { content: attr(data-label); color: #718096; font-size: .7rem; font-weight: 700; }
     .tabela-registros-ponto td:first-child, .tabela-registros-ponto .acoes-registro { grid-column: 1 / -1; }

@@ -32,7 +32,7 @@ def buscar_registros_ponto(filtros):
                COALESCE(usuario.login, ''), COALESCE(usuario.email, ''),
                registro.tipo_batida,
                TO_CHAR(registro.registrado_em AT TIME ZONE 'America/Sao_Paulo',
-                       'YYYY-MM-DD\"T\"HH24:MI')
+                       'DD/MM/YYYY HH24:MI')
         FROM registros_ponto AS registro
         LEFT JOIN usuarios AS usuario ON usuario.id = registro.usuario_id
         WHERE TRUE
@@ -161,17 +161,25 @@ def salvar_marco_zero():
 def exibir_registros_ponto():
     filtros = obter_filtros_registros(request.args)
     erro = None
+    data_filtro_exibicao = filtros["data"]
     if filtros["data"]:
         try:
-            date.fromisoformat(filtros["data"])
+            try:
+                data_filtro = date.fromisoformat(filtros["data"])
+            except ValueError:
+                data_filtro = datetime.strptime(filtros["data"], "%d/%m/%Y").date()
+            filtros["data"] = data_filtro.isoformat()
+            data_filtro_exibicao = data_filtro.strftime("%d/%m/%Y")
         except ValueError:
             filtros["data"] = ""
+            data_filtro_exibicao = ""
             erro = "Informe uma data válida."
     registros = buscar_registros_ponto(filtros)
     return renderizar_pagina(
         "registros_ponto.html",
         "configuracoes",
         filtros_registros=filtros,
+        data_filtro_exibicao=data_filtro_exibicao,
         registros_ponto=registros,
         resultado_registros=request.args.get("resultado"),
         erro_registros=erro,
@@ -186,7 +194,7 @@ def editar_registro_ponto(registro_id):
     tipo = request.form.get("tipo_batida", "")
     horario_texto = request.form.get("registrado_em", "")
     try:
-        horario = datetime.strptime(horario_texto, "%Y-%m-%dT%H:%M").replace(
+        horario = datetime.strptime(horario_texto, "%d/%m/%Y %H:%M").replace(
             tzinfo=FUSO_HORARIO
         )
     except ValueError:

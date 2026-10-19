@@ -25,6 +25,7 @@ let zoomMapa = 17;
 let arrastoMapa = null;
 let ultimaBuscaMapa = 0;
 let enderecoCoordenadasConfirmadas = enderecoMarco.value.trim();
+let localizacaoConfirmada = Boolean(latitudeMarco.value && longitudeMarco.value);
 
 function mostrarMensagem(mensagem, erro = false) {
     mensagemMarco.textContent = mensagem;
@@ -203,13 +204,14 @@ async function localizarEndereco() {
         if (!resultados.length) throw new Error("Endereço não encontrado. Confira o CEP ou informe rua, número e cidade.");
         const local = resultados[0];
         definirCentro(Number(local.lat), Number(local.lon));
+        localizacaoConfirmada = false;
         marcarEnderecoResolvido(
             buscaPorCep ? enderecoCep : enderecoComCep(local) || local.display_name,
         );
         mostrarMensagem(
             buscaPorCep
-                ? "CEP localizado como referência aproximada. Ajuste o mapa até o ponto exato da escola e clique em Usar centro do mapa."
-                : "Local encontrado. Confira o marcador no mapa e salve.",
+                ? "CEP localizado como referência aproximada. Ajuste o marcador até o ponto exato da escola e clique em Usar centro do mapa."
+                : "Endereço localizado de forma aproximada. Confira o marcador, ajuste se necessário e clique em Usar centro do mapa.",
         );
     } catch (erro) {
         mostrarMensagem(erro.message, true);
@@ -230,6 +232,7 @@ function obterLocalizacaoAtual() {
         async (posicao) => {
             try {
                 definirCentro(posicao.coords.latitude, posicao.coords.longitude, false);
+                localizacaoConfirmada = false;
                 const endereco = await preencherEnderecoDaCoordenada(
                     posicao.coords.latitude,
                     posicao.coords.longitude,
@@ -237,7 +240,7 @@ function obterLocalizacaoAtual() {
                 marcarEnderecoResolvido(endereco);
                 latitudeMarco.value = posicao.coords.latitude.toFixed(7);
                 longitudeMarco.value = posicao.coords.longitude.toFixed(7);
-                mostrarMensagem("Endereço identificado. Confira o raio e salve o marco zero.");
+                mostrarMensagem("Localização identificada. Confira o marcador e clique em Usar centro do mapa para confirmar.");
             } catch (erro) {
                 mostrarMensagem(erro.message, true);
             } finally {
@@ -266,6 +269,7 @@ function selecionarCentroDoMapa() {
             marcarEnderecoResolvido(endereco);
             latitudeMarco.value = coordenadaSelecionada.latitude.toFixed(7);
             longitudeMarco.value = coordenadaSelecionada.longitude.toFixed(7);
+            localizacaoConfirmada = true;
             mostrarMensagem("Coordenadas selecionadas. O endereço exibido é aproximado; confira o marcador e salve o marco zero.");
         })
         .catch((erro) => mostrarMensagem(erro.message, true))
@@ -286,6 +290,7 @@ enderecoMarco.addEventListener("input", () => {
     if (enderecoMarco.value.trim() === enderecoCoordenadasConfirmadas) return;
     latitudeMarco.value = "";
     longitudeMarco.value = "";
+    localizacaoConfirmada = false;
     centroMapa = null;
     camadaTilesMapa.replaceChildren();
     instrucaoMapaVazio.hidden = false;
@@ -312,6 +317,7 @@ mapaMarco.addEventListener("pointerdown", (evento) => {
 
 mapaMarco.addEventListener("pointermove", (evento) => {
     if (!arrastoMapa) return;
+    localizacaoConfirmada = false;
     const deltaX = evento.clientX - arrastoMapa.x;
     const deltaY = evento.clientY - arrastoMapa.y;
     arrastoMapa.deltaX = deltaX;
@@ -342,6 +348,10 @@ formularioMarco.addEventListener("submit", async (evento) => {
     evento.preventDefault();
     if (!latitudeMarco.value || !longitudeMarco.value) {
         mostrarMensagem("Localize um endereço ou escolha o centro do mapa antes de salvar.", true);
+        return;
+    }
+    if (!localizacaoConfirmada) {
+        mostrarMensagem("Confirme o ponto exato clicando em Usar centro do mapa antes de salvar.", true);
         return;
     }
     if (centroMapa) {

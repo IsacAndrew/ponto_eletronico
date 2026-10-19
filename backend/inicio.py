@@ -111,16 +111,17 @@ def registrar_ponto():
                 distancia = calcular_distancia_metros(
                     latitude, longitude, latitude_marco, longitude_marco
                 )
-                if distancia > raio_metros:
+                if distancia - precisao > raio_metros:
                     current_app.logger.warning(
-                        "PONTO_E03: posição fora do raio (distância=%sm, raio=%sm)",
-                        round(distancia), raio_metros,
+                        "PONTO_E03: posição fora do raio mesmo considerando a precisão "
+                        "(distância=%sm, precisão=%sm, raio=%sm)",
+                        round(distancia), round(precisao), raio_metros,
                     )
                     return jsonify(
                         sucesso=False,
                         codigo_erro="E03",
                         mensagem=(
-                            "Ponto não registrado por localização fora do raio. "
+                            "Ponto não registrado: localização fora do raio permitido. "
                             "Informe o código E03 ao suporte."
                         ),
                     ), 403
