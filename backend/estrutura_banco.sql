@@ -37,6 +37,9 @@ CREATE TABLE IF NOT EXISTS registros_ponto (
     UNIQUE (usuario_id, data_ponto, tipo_batida)
 );
 
+CREATE INDEX IF NOT EXISTS registros_ponto_data_usuario_idx
+ON registros_ponto (data_ponto, usuario_id);
+
 ALTER TABLE registros_ponto
 ADD COLUMN IF NOT EXISTS usuario_nome TEXT;
 

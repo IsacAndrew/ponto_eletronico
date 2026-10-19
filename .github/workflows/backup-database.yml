@@ -1,0 +1,44 @@
+name: Backup diário do banco
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-diario-banco
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    env:
+      DB_HOST: ${{ secrets.DB_HOST }}
+      DB_PORT: ${{ secrets.DB_PORT }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+      BACKUP_OUTPUT_DIR: ${{ runner.temp }}/backups
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Instalar ferramentas PostgreSQL e GPG
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client gnupg
+
+      - name: Gerar e criptografar o backup
+        run: python scripts/backup_database.py
+
+      - name: Guardar o backup por 90 dias
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-ponto-${{ github.run_id }}
+          path: ${{ runner.temp }}/backups/*.dump.gpg
+          if-no-files-found: error
+          retention-days: 90

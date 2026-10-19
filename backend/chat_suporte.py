@@ -39,16 +39,18 @@ def garantir_tabelas_chat(conexao):
 
 def _obter_conversa_usuario(conexao, usuario_id, nome):
     conversa = conexao.execute(
-        "SELECT id FROM conversas_suporte WHERE usuario_id = %s", (usuario_id,)
+        """
+        INSERT INTO conversas_suporte (usuario_id, usuario_nome)
+        VALUES (%s, %s)
+        ON CONFLICT (usuario_id) DO NOTHING
+        RETURNING id
+        """,
+        (usuario_id, nome),
     ).fetchone()
     if conversa:
         return conversa[0]
     conversa = conexao.execute(
-        """
-        INSERT INTO conversas_suporte (usuario_id, usuario_nome)
-        VALUES (%s, %s) RETURNING id
-        """,
-        (usuario_id, nome),
+        "SELECT id FROM conversas_suporte WHERE usuario_id = %s", (usuario_id,)
     ).fetchone()
     return conversa[0]
 

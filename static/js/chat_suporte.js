@@ -7,6 +7,8 @@
     const formulario = areaChat.querySelector("[data-form-mensagem]");
     const status = areaChat.querySelector("[data-status]");
     let ultimaMensagem = 0;
+    let consultaEmAndamento = false;
+    let intervaloAtualizacao = 2000;
 
     function mostrarMensagem(mensagem) {
         if (mensagem.id <= ultimaMensagem) return;
@@ -23,16 +25,30 @@
     }
 
     async function atualizarMensagens() {
+        if (consultaEmAndamento) return;
+        consultaEmAndamento = true;
+        let proximoIntervalo = intervaloAtualizacao;
         try {
             const resposta = await fetch(`/chat-suporte/atualizacoes?conversa=${encodeURIComponent(conversa)}&desde=${ultimaMensagem}`);
             if (!resposta.ok) {
                 if (resposta.status === 404) window.location.reload();
-                return;
+                throw new Error("Falha ao consultar as mensagens.");
             }
             const dados = await resposta.json();
             dados.mensagens.forEach(mostrarMensagem);
+            if (status) status.textContent = "";
+            intervaloAtualizacao = 2000;
+            proximoIntervalo = intervaloAtualizacao;
         } catch {
             if (status) status.textContent = "Sem conexão. Tentando novamente…";
+            intervaloAtualizacao = Math.min(intervaloAtualizacao * 2, 30000);
+            proximoIntervalo = intervaloAtualizacao;
+        } finally {
+            consultaEmAndamento = false;
+            window.setTimeout(
+                atualizarMensagens,
+                document.hidden ? Math.max(proximoIntervalo, 10000) : proximoIntervalo,
+            );
         }
     }
 
@@ -74,5 +90,4 @@
     });
 
     atualizarMensagens();
-    window.setInterval(atualizarMensagens, 2000);
 })();

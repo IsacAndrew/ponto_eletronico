@@ -9,6 +9,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.worksheet.table import Table, TableStyleInfo
 
 from .banco_dados import criar_conexao
+from .estrutura_registros import garantir_indices_registros
 from .jornada import garantir_estrutura_jornada
 from .permissoes import exigir_tipos_conta, renderizar_pagina
 
@@ -81,6 +82,7 @@ def obter_periodo(formulario):
 
 
 def buscar_registros(inicio, fim, ids_usuarios=None):
+    garantir_indices_registros()
     consulta = """
         SELECT registro.usuario_id,
                COALESCE(usuario.nome_completo, registro.usuario_nome, 'Usuário removido'),

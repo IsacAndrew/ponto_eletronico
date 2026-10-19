@@ -2,8 +2,9 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-from flask import Flask
+from flask import Flask, jsonify
 
+from .banco_dados import criar_conexao
 from .inicio import rota_inicio
 from .login import rota_login
 from .usuarios import rota_usuarios
@@ -35,6 +36,23 @@ app.config.update(
     SESSION_COOKIE_SECURE=os.getenv("SESSION_COOKIE_SECURE", "false").lower()
     == "true",
 )
+
+
+@app.get("/health/database")
+def verificar_banco():
+    try:
+        with criar_conexao() as conexao:
+            conexao.execute("SELECT 1").fetchone()
+    except Exception:
+        app.logger.exception("Verificação de saúde do banco falhou.")
+        resposta = jsonify(status="unavailable")
+        resposta.status_code = 503
+        resposta.headers["Cache-Control"] = "no-store"
+        return resposta
+
+    resposta = jsonify(status="ok")
+    resposta.headers["Cache-Control"] = "no-store"
+    return resposta
 
 app.register_blueprint(rota_login)
 app.register_blueprint(rota_inicio)

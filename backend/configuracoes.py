@@ -6,6 +6,7 @@ from flask import Blueprint, g, jsonify, redirect, request, session, url_for
 from psycopg.errors import UniqueViolation
 
 from .banco_dados import criar_conexao
+from .estrutura_registros import garantir_indices_registros
 from .localizacao import garantir_tabela_marco_zero, obter_marco_zero
 from .permissoes import exigir_tipos_conta, renderizar_pagina
 
@@ -24,6 +25,7 @@ def obter_filtros_registros(fonte):
 
 
 def buscar_registros_ponto(filtros):
+    garantir_indices_registros()
     consulta = """
         SELECT registro.id,
                COALESCE(registro.usuario_nome, usuario.nome_completo, 'Acesso removido'),
