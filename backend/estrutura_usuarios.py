@@ -21,6 +21,7 @@ def garantir_estrutura_usuarios():
                 ADD COLUMN IF NOT EXISTS registro_fora_unidade BOOLEAN NOT NULL DEFAULT FALSE
                 """
             )
+            conexao.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS funcao TEXT")
             conexao.execute(
                 """
                 CREATE UNIQUE INDEX IF NOT EXISTS usuarios_login_normalizado_uidx

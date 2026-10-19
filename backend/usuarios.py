@@ -66,7 +66,7 @@ def buscar_usuario(usuario_id):
     with criar_conexao() as conexao:
         usuario = conexao.execute(
             """
-            SELECT id, nome_completo, login, email, telefone, tipo_conta, ativo,
+            SELECT id, nome_completo, login, email, telefone, tipo_conta, funcao, ativo,
                    quantidade_batidas, dias_trabalho_semana, registro_fora_unidade
             FROM usuarios
             WHERE id = %s
@@ -80,7 +80,7 @@ def buscar_usuario(usuario_id):
     return dict(
         zip(
             (
-                "id", "nome_completo", "login", "email", "telefone", "tipo_conta",
+                "id", "nome_completo", "login", "email", "telefone", "tipo_conta", "funcao",
                 "ativo", "quantidade_batidas", "dias_trabalho_semana",
                 "registro_fora_unidade",
             ),
@@ -181,6 +181,7 @@ def validar_dados_usuario(formulario):
         "login": formulario.get("login", "").strip(),
         "email": formulario.get("email", "").strip() or None,
         "telefone": telefone or None,
+        "funcao": formulario.get("funcao", "").strip() or None,
         "tipo_conta": formulario.get("tipo_conta", "") or "Professor",
     }
 
@@ -192,6 +193,8 @@ def validar_dados_usuario(formulario):
         return dados, "Informe um email válido."
     if dados["telefone"] and not re.fullmatch(r"\(\d{2}\) \d{5}-\d{4}", dados["telefone"]):
         return dados, "Use o formato de telefone (xx) xxxxx-xxxx."
+    if dados["funcao"] and len(dados["funcao"]) > 100:
+        return dados, "A função deve ter no máximo 100 caracteres."
     if dados["tipo_conta"] not in TIPOS_CONTA:
         return dados, "Selecione uma permissão válida."
     return dados, None
@@ -390,6 +393,7 @@ def editar_usuario(usuario_id):
                         email = %s,
                         telefone = %s,
                         tipo_conta = %s,
+                        funcao = %s,
                         ativo = %s,
                         registro_fora_unidade = %s
                     WHERE id = %s
@@ -400,6 +404,7 @@ def editar_usuario(usuario_id):
                         dados["email"],
                         dados["telefone"],
                         dados["tipo_conta"],
+                        dados["funcao"],
                         ativo,
                         registro_fora_unidade,
                         usuario_id,

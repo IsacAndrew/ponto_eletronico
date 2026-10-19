@@ -191,6 +191,9 @@
                         {% endfor %}
                     </select>
 
+                    <label for="funcao-usuario">Função</label>
+                    <input id="funcao-usuario" name="funcao" type="text" value="{{ usuario_edicao.funcao or '' }}" maxlength="100" placeholder="Ex.: Limpeza, Auxiliar administrativo, Coordenador">
+
                     {% if conta_suporte and not modo_visualizacao %}
                         <label class="campo-ativo" for="registro-fora-unidade">
                             <input id="registro-fora-unidade" name="registro_fora_unidade" type="checkbox" {% if usuario_edicao.registro_fora_unidade %}checked{% endif %}>
