@@ -192,7 +192,7 @@
                     </select>
 
                     <label for="funcao-usuario">Função</label>
-                    <input id="funcao-usuario" name="funcao" type="text" value="{{ usuario_edicao.funcao or '' }}" maxlength="100" placeholder="Ex.: Limpeza, Auxiliar administrativo, Coordenador">
+                    <input id="funcao-usuario" name="funcao" type="text" value="{{ usuario_edicao.funcao or '' }}" maxlength="100">
 
                     {% if conta_suporte and not modo_visualizacao %}
                         <label class="campo-ativo" for="registro-fora-unidade">
