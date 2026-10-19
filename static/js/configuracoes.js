@@ -24,6 +24,7 @@ let centroMapa = null;
 let zoomMapa = 17;
 let arrastoMapa = null;
 let ultimaBuscaMapa = 0;
+let enderecoCoordenadasConfirmadas = enderecoMarco.value.trim();
 
 function mostrarMensagem(mensagem, erro = false) {
     mensagemMarco.textContent = mensagem;
@@ -117,6 +118,30 @@ async function consultarNominatim(caminho, parametros) {
     return resposta.json();
 }
 
+async function consultarCep(cep) {
+    const resposta = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+    if (!resposta.ok) throw new Error("Não foi possível consultar esse CEP. Tente novamente.");
+    const local = await resposta.json();
+    if (local.erro) throw new Error("CEP não encontrado. Confira os números digitados.");
+    return local;
+}
+
+function formatarEnderecoCep(local) {
+    return [
+        local.logradouro,
+        local.bairro,
+        local.localidade,
+        local.uf,
+        local.cep,
+        "Brasil",
+    ].filter(Boolean).join(", ");
+}
+
+function marcarEnderecoResolvido(endereco) {
+    enderecoMarco.value = endereco;
+    enderecoCoordenadasConfirmadas = enderecoMarco.value.trim();
+}
+
 function enderecoComCep(local) {
     const partes = local.address || {};
     const logradouro = [partes.road || partes.pedestrian, partes.house_number]
@@ -151,16 +176,41 @@ async function localizarEndereco() {
     controles.buscar.disabled = true;
     mostrarMensagem("Localizando endereço no mapa…");
     try {
-        const resultados = await consultarNominatim("search", {
-            q: endereco,
-            countrycodes: "br",
-            limit: 1,
-        });
+        const cep = endereco.replace(/\D/g, "");
+        let parametros;
+        let buscaPorCep = false;
+        let enderecoCep = "";
+        if (cep.length === 8 && /^\d{5}-?\d{3}$/.test(endereco.replace(/\s/g, ""))) {
+            const localCep = await consultarCep(cep);
+            enderecoCep = formatarEnderecoCep(localCep);
+            parametros = {
+                street: localCep.logradouro,
+                city: localCep.localidade,
+                state: localCep.uf,
+                postalcode: cep,
+                country: "Brasil",
+                countrycodes: "br",
+                limit: 1,
+            };
+            Object.keys(parametros).forEach((chave) => {
+                if (!parametros[chave]) delete parametros[chave];
+            });
+            buscaPorCep = true;
+        } else {
+            parametros = { q: endereco, countrycodes: "br", limit: 1 };
+        }
+        const resultados = await consultarNominatim("search", parametros);
         if (!resultados.length) throw new Error("Endereço não encontrado. Confira o CEP ou informe rua, número e cidade.");
         const local = resultados[0];
         definirCentro(Number(local.lat), Number(local.lon));
-        enderecoMarco.value = enderecoComCep(local) || local.display_name;
-        mostrarMensagem("Local encontrado. Confira o marcador no mapa e salve.");
+        marcarEnderecoResolvido(
+            buscaPorCep ? enderecoCep : enderecoComCep(local) || local.display_name,
+        );
+        mostrarMensagem(
+            buscaPorCep
+                ? "CEP localizado como referência aproximada. Ajuste o mapa até o ponto exato da escola e clique em Usar centro do mapa."
+                : "Local encontrado. Confira o marcador no mapa e salve.",
+        );
     } catch (erro) {
         mostrarMensagem(erro.message, true);
     } finally {
@@ -180,10 +230,11 @@ function obterLocalizacaoAtual() {
         async (posicao) => {
             try {
                 definirCentro(posicao.coords.latitude, posicao.coords.longitude, false);
-                enderecoMarco.value = await preencherEnderecoDaCoordenada(
+                const endereco = await preencherEnderecoDaCoordenada(
                     posicao.coords.latitude,
                     posicao.coords.longitude,
                 );
+                marcarEnderecoResolvido(endereco);
                 latitudeMarco.value = posicao.coords.latitude.toFixed(7);
                 longitudeMarco.value = posicao.coords.longitude.toFixed(7);
                 mostrarMensagem("Endereço identificado. Confira o raio e salve o marco zero.");
@@ -212,10 +263,10 @@ function selecionarCentroDoMapa() {
     botaoConfirmarMapa.disabled = true;
     preencherEnderecoDaCoordenada(coordenadaSelecionada.latitude, coordenadaSelecionada.longitude)
         .then((endereco) => {
-            enderecoMarco.value = endereco;
+            marcarEnderecoResolvido(endereco);
             latitudeMarco.value = coordenadaSelecionada.latitude.toFixed(7);
             longitudeMarco.value = coordenadaSelecionada.longitude.toFixed(7);
-            mostrarMensagem("Local selecionado. Confira o raio e salve o marco zero.");
+            mostrarMensagem("Coordenadas selecionadas. O endereço exibido é aproximado; confira o marcador e salve o marco zero.");
         })
         .catch((erro) => mostrarMensagem(erro.message, true))
         .finally(() => { botaoConfirmarMapa.disabled = false; });
@@ -231,6 +282,16 @@ botaoAbrirMarco.addEventListener("click", () => {
 
 document.querySelector("#fechar-marco-zero").addEventListener("click", () => janelaMarco.close());
 document.querySelector("#cancelar-marco-zero").addEventListener("click", () => janelaMarco.close());
+enderecoMarco.addEventListener("input", () => {
+    if (enderecoMarco.value.trim() === enderecoCoordenadasConfirmadas) return;
+    latitudeMarco.value = "";
+    longitudeMarco.value = "";
+    centroMapa = null;
+    camadaTilesMapa.replaceChildren();
+    instrucaoMapaVazio.hidden = false;
+    botaoConfirmarMapa.disabled = true;
+    mostrarMensagem("O endereço foi alterado. Localize-o novamente para atualizar as coordenadas.");
+});
 controles.buscar.addEventListener("click", localizarEndereco);
 controles.gps.addEventListener("click", obterLocalizacaoAtual);
 botaoConfirmarMapa.addEventListener("click", selecionarCentroDoMapa);
