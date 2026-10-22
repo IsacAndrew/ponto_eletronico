@@ -17,12 +17,20 @@ async function registrarPonto() {
 
     try {
         const localizacao = await obterLocalizacao();
-        const resposta = await fetch("/registrar-ponto", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(localizacao),
-        });
-        const resultado = await resposta.json();
+        let resposta = await enviarRegistro(localizacao);
+        let resultado = await resposta.json();
+
+        if (resultado.perguntar_quantidade_batidas) {
+            const quantidade = window.prompt(
+                "Quantas batidas de ponto você possui no dia de hoje? (2, 3 ou 4)"
+            );
+            if (quantidade === null) return;
+            resposta = await enviarRegistro({
+                ...localizacao,
+                quantidade_batidas_dia: quantidade.trim(),
+            });
+            resultado = await resposta.json();
+        }
 
         if (!resposta.ok) {
             const erro = new Error(resultado.mensagem || "Não foi possível registrar o ponto.");
@@ -31,11 +39,22 @@ async function registrarPonto() {
         }
 
         ultimoRegistro.textContent = `Último registro: ${resultado.horario} / ${resultado.tipo_batida}`;
+        if (resultado.confirmacao_quantidade) {
+            window.alert("Ok, muito obrigado. Ponto registrado com sucesso pode fechar essa aba");
+        }
     } catch (erro) {
         window.alert(mensagemErroPonto(erro));
     } finally {
         botaoRegistrar.disabled = false;
     }
+}
+
+function enviarRegistro(dados) {
+    return fetch("/registrar-ponto", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(dados),
+    });
 }
 
 function obterLocalizacao() {

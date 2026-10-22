@@ -22,6 +22,7 @@ def garantir_estrutura_usuarios():
                 """
             )
             conexao.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS funcao TEXT")
+            conexao.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS rg TEXT")
             conexao.execute(
                 """
                 CREATE UNIQUE INDEX IF NOT EXISTS usuarios_login_normalizado_uidx

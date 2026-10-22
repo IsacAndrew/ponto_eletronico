@@ -158,7 +158,16 @@
                             <div class="linha-jornada">
                                 <a href="{{ url_for('usuarios.editar_usuario', usuario_id=usuario_edicao.id, filtro=filtro_atual, busca=busca, aba='jornada', dia=jornada.dia_semana) }}">
                                     <strong>{{ jornada.dia_nome }}</strong>
-                                    <span>{% if usuario_edicao.quantidade_batidas == 2 %}{{ jornada.entrada.strftime('%H:%M') }} · {{ jornada.saida.strftime('%H:%M') }}{% else %}{{ jornada.entrada.strftime('%H:%M') if jornada.entrada else '—' }} · {{ jornada.intervalo.strftime('%H:%M') if jornada.intervalo else '—' }} · {{ jornada.retorno_intervalo.strftime('%H:%M') if jornada.retorno_intervalo else '—' }} · {{ jornada.saida.strftime('%H:%M') if jornada.saida else '—' }}{% endif %}</span>
+                                    <span>
+                                        {% if jornada.quantidade_batidas %}{{ jornada.quantidade_batidas }} batidas{% if jornada.entrada %} · {% endif %}{% endif %}
+                                        {% if jornada.entrada %}
+                                            {% if usuario_edicao.quantidade_batidas == 2 %}
+                                                {{ jornada.entrada.strftime('%H:%M') }} · {{ jornada.saida.strftime('%H:%M') }}
+                                            {% else %}
+                                                {{ jornada.entrada.strftime('%H:%M') if jornada.entrada else '—' }} · {{ jornada.intervalo.strftime('%H:%M') if jornada.intervalo else '—' }} · {{ jornada.retorno_intervalo.strftime('%H:%M') if jornada.retorno_intervalo else '—' }} · {{ jornada.saida.strftime('%H:%M') if jornada.saida else '—' }}
+                                            {% endif %}
+                                        {% endif %}
+                                    </span>
                                 </a>
                                 <form method="post" action="{{ url_for('usuarios.excluir_jornada', usuario_id=usuario_edicao.id, dia=jornada.dia_semana, filtro=filtro_atual, busca=busca) }}">
                                     <button type="submit" aria-label="Remover jornada de {{ jornada.dia_nome }}">Remover</button>
@@ -183,6 +192,9 @@
 
                     <label for="telefone-usuario">Telefone</label>
                     <input id="telefone-usuario" name="telefone" type="tel" value="{{ usuario_edicao.telefone or '' }}" placeholder="(xx) xxxxx-xxxx" autocomplete="tel" data-formatar-telefone>
+
+                    <label for="rg-usuario">RG</label>
+                    <input id="rg-usuario" name="rg" type="text" value="{{ usuario_edicao.rg or '' }}" maxlength="30" autocomplete="off">
 
                     <label for="permissao-usuario">Permissão</label>
                     <select id="permissao-usuario" name="tipo_conta" required>
@@ -249,6 +261,9 @@
 
                     <label for="novo-telefone">Telefone</label>
                     <input id="novo-telefone" name="telefone" type="tel" value="{{ usuario_novo.telefone or '' }}" placeholder="(xx) xxxxx-xxxx" autocomplete="tel" data-formatar-telefone>
+
+                    <label for="novo-rg">RG</label>
+                    <input id="novo-rg" name="rg" type="text" value="{{ usuario_novo.rg or '' }}" maxlength="30" autocomplete="off">
 
                     <label for="nova-permissao">Permissão</label>
                     <select id="nova-permissao" name="tipo_conta">

@@ -81,7 +81,7 @@ def registrar_ponto():
     with criar_conexao() as conexao:
         with conexao.cursor() as cursor:
             cursor.execute(
-                """SELECT id, quantidade_batidas, registro_fora_unidade
+                """SELECT id, quantidade_batidas, registro_fora_unidade, tipo_conta
                    FROM usuarios WHERE id = %s AND ativo = TRUE FOR UPDATE""",
                 (usuario_id,),
             )
@@ -149,16 +149,93 @@ def registrar_ponto():
             )
             quantidade_batidas, ultima_batida = cursor.fetchone()
 
-            if quantidade_batidas >= len(tipos_batida):
-                return jsonify(
-                    sucesso=False,
-                    mensagem=f"As {len(tipos_batida)} batidas de hoje já foram registradas.",
-                ), 409
+            cursor.execute(
+                """SELECT quantidade_batidas FROM jornadas_quantidade_batidas
+                   WHERE usuario_id = %s AND dia_semana = %s""",
+                (usuario_id, agora.weekday()),
+            )
+            ajuste_dia = cursor.fetchone()
+            quantidade_prevista = ajuste_dia[0] if ajuste_dia else len(tipos_batida)
+            if ajuste_dia:
+                tipos_batida = {
+                    2: ("Entrada", "Saída"),
+                    3: ("Entrada", "Intervalo", "Saída"),
+                    4: TIPOS_BATIDA,
+                }[quantidade_prevista]
 
             if ultima_batida and agora - ultima_batida < timedelta(minutes=5):
                 return jsonify(
                     sucesso=False,
                     mensagem="Aguarde pelo menos 5 minutos entre uma batida e outra.",
+                ), 409
+
+            quantidade_informada = dados_localizacao.get("quantidade_batidas_dia")
+            confirmar_quantidade = False
+            if quantidade_informada is not None:
+                if usuario[3] != "Professor" or quantidade_batidas < quantidade_prevista:
+                    return jsonify(sucesso=False, mensagem="Ajuste de batidas não solicitado."), 400
+                try:
+                    quantidade_informada = int(quantidade_informada)
+                except (TypeError, ValueError):
+                    quantidade_informada = 0
+                if quantidade_informada not in {2, 3, 4}:
+                    return jsonify(sucesso=False, mensagem="Informe 2, 3 ou 4 batidas."), 400
+                if quantidade_informada <= quantidade_batidas:
+                    return jsonify(
+                        sucesso=False,
+                        mensagem=(
+                            f"Você informou {quantidade_informada} batidas, mas já registrou "
+                            f"{quantidade_batidas}. Não foi adicionada outra batida."
+                        ),
+                    ), 409
+                if quantidade_informada < quantidade_prevista:
+                    return jsonify(
+                        sucesso=False,
+                        mensagem="A quantidade informada não pode ser menor que o limite atual.",
+                    ), 409
+
+                cursor.execute(
+                    """INSERT INTO jornadas_quantidade_batidas
+                       (usuario_id, dia_semana, quantidade_batidas)
+                       VALUES (%s, %s, %s)
+                       ON CONFLICT (usuario_id, dia_semana)
+                       DO UPDATE SET quantidade_batidas = EXCLUDED.quantidade_batidas""",
+                    (usuario_id, agora.weekday(), quantidade_informada),
+                )
+                tipos_batida = {
+                    2: ("Entrada", "Saída"),
+                    3: ("Entrada", "Intervalo", "Saída"),
+                    4: TIPOS_BATIDA,
+                }[quantidade_informada]
+                cursor.execute(
+                    """SELECT id FROM registros_ponto
+                       WHERE usuario_id = %s AND data_ponto = %s
+                       ORDER BY registrado_em, id""",
+                    (usuario_id, agora.date()),
+                )
+                registros_hoje = cursor.fetchall()
+                for indice, (registro_id,) in enumerate(registros_hoje):
+                    cursor.execute(
+                        "UPDATE registros_ponto SET tipo_batida = %s WHERE id = %s",
+                        (tipos_batida[indice], registro_id),
+                    )
+                confirmar_quantidade = True
+
+            if quantidade_batidas >= quantidade_prevista and not confirmar_quantidade:
+                if (
+                    usuario[3] == "Professor"
+                    and quantidade_prevista < 4
+                    and quantidade_batidas < 4
+                    and agora.hour < 17
+                ):
+                    return jsonify(
+                        sucesso=False,
+                        perguntar_quantidade_batidas=True,
+                        mensagem="Quantas batidas de ponto você possui no dia de hoje?",
+                    ), 409
+                return jsonify(
+                    sucesso=False,
+                    mensagem=f"As {quantidade_prevista} batidas de hoje já foram registradas.",
                 ), 409
 
             tipo_batida = tipos_batida[quantidade_batidas]
@@ -183,4 +260,5 @@ def registrar_ponto():
         tipo_batida=tipo_batida,
         horario=agora.strftime("%H:%M:%S"),
         mensagem=f"{tipo_batida} registrada às {agora.strftime('%H:%M:%S')}.",
+        confirmacao_quantidade=confirmar_quantidade,
     )

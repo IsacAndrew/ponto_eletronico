@@ -55,4 +55,14 @@ def garantir_estrutura_jornada():
             conexao.execute(
                 "ALTER TABLE jornadas_usuarios ALTER COLUMN retorno_intervalo DROP NOT NULL"
             )
+            conexao.execute(
+                """
+                CREATE TABLE IF NOT EXISTS jornadas_quantidade_batidas (
+                    usuario_id BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                    dia_semana SMALLINT NOT NULL CHECK (dia_semana BETWEEN 0 AND 6),
+                    quantidade_batidas SMALLINT NOT NULL CHECK (quantidade_batidas BETWEEN 2 AND 4),
+                    PRIMARY KEY (usuario_id, dia_semana)
+                )
+                """
+            )
         _estrutura_pronta = True

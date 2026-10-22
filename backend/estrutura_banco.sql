@@ -16,6 +16,9 @@ ADD COLUMN IF NOT EXISTS registro_fora_unidade BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE usuarios
 ADD COLUMN IF NOT EXISTS funcao TEXT;
 
+ALTER TABLE usuarios
+ADD COLUMN IF NOT EXISTS rg TEXT;
+
 CREATE UNIQUE INDEX IF NOT EXISTS usuarios_login_normalizado_uidx
 ON usuarios (LOWER(BTRIM(login)));
 
@@ -66,6 +69,13 @@ CREATE TABLE IF NOT EXISTS jornadas_usuarios (
     intervalo TIME,
     retorno_intervalo TIME,
     saida TIME NOT NULL,
+    PRIMARY KEY (usuario_id, dia_semana)
+);
+
+CREATE TABLE IF NOT EXISTS jornadas_quantidade_batidas (
+    usuario_id BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    dia_semana SMALLINT NOT NULL CHECK (dia_semana BETWEEN 0 AND 6),
+    quantidade_batidas SMALLINT NOT NULL CHECK (quantidade_batidas BETWEEN 2 AND 4),
     PRIMARY KEY (usuario_id, dia_semana)
 );
 

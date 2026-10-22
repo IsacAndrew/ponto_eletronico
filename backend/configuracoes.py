@@ -7,6 +7,7 @@ from psycopg.errors import UniqueViolation
 
 from .banco_dados import criar_conexao
 from .estrutura_registros import garantir_indices_registros
+from .estrutura_usuarios import garantir_estrutura_usuarios
 from .localizacao import garantir_tabela_marco_zero, obter_marco_zero
 from .permissoes import exigir_tipos_conta, renderizar_pagina
 
@@ -58,13 +59,14 @@ def buscar_registros_ponto(filtros):
 @rota_configuracoes.route("/configuracoes")
 @exigir_tipos_conta("Suporte", "Administração", "Professor", "Colaborador")
 def exibir_configuracoes():
+    garantir_estrutura_usuarios()
     latitude = longitude = None
     endereco = ""
     raio = 100
     configurado = False
     with criar_conexao() as conexao:
         perfil = conexao.execute(
-            "SELECT nome_completo, login, email, telefone FROM usuarios WHERE id = %s",
+            "SELECT nome_completo, login, email, telefone, rg FROM usuarios WHERE id = %s",
             (session["usuario_id"],),
         ).fetchone()
     if g.tipo_conta_real == "Suporte" and not g.modo_visualizacao:
@@ -92,6 +94,7 @@ def salvar_perfil():
     login = request.form.get("login", "").strip()
     email = request.form.get("email", "").strip()
     telefone = request.form.get("telefone", "").strip()
+    rg = request.form.get("rg", "").strip() or None
     usuario_id = session["usuario_id"]
     if len(nome.split()) < 2 or len(nome) > 200:
         return redirect(url_for("configuracoes.exibir_configuracoes", perfil="nome_invalido"))
@@ -101,6 +104,8 @@ def salvar_perfil():
         return redirect(url_for("configuracoes.exibir_configuracoes", perfil="email_invalido"))
     if not re.fullmatch(r"\(\d{2}\) \d{5}-\d{4}", telefone):
         return redirect(url_for("configuracoes.exibir_configuracoes", perfil="telefone_invalido"))
+    if len(rg or "") > 30:
+        return redirect(url_for("configuracoes.exibir_configuracoes", perfil="rg_invalido"))
 
     with criar_conexao() as conexao:
         conflito = conexao.execute(
@@ -110,9 +115,9 @@ def salvar_perfil():
         if conflito:
             return redirect(url_for("configuracoes.exibir_configuracoes", perfil="duplicado"))
         conexao.execute(
-            """UPDATE usuarios SET nome_completo = %s, login = %s, email = %s, telefone = %s
+            """UPDATE usuarios SET nome_completo = %s, login = %s, email = %s, telefone = %s, rg = %s
                WHERE id = %s""",
-            (nome, login, email, telefone, usuario_id),
+            (nome, login, email, telefone, rg, usuario_id),
         )
     session["usuario_nome"] = nome
     return redirect(url_for("configuracoes.exibir_configuracoes", perfil="salvo"))

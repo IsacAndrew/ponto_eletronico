@@ -66,7 +66,7 @@ def buscar_usuario(usuario_id):
     with criar_conexao() as conexao:
         usuario = conexao.execute(
             """
-            SELECT id, nome_completo, login, email, telefone, tipo_conta, funcao, ativo,
+            SELECT id, nome_completo, login, email, telefone, rg, tipo_conta, funcao, ativo,
                    quantidade_batidas, dias_trabalho_semana, registro_fora_unidade
             FROM usuarios
             WHERE id = %s
@@ -80,7 +80,7 @@ def buscar_usuario(usuario_id):
     return dict(
         zip(
             (
-                "id", "nome_completo", "login", "email", "telefone", "tipo_conta", "funcao",
+                "id", "nome_completo", "login", "email", "telefone", "rg", "tipo_conta", "funcao",
                 "ativo", "quantidade_batidas", "dias_trabalho_semana",
                 "registro_fora_unidade",
             ),
@@ -93,10 +93,15 @@ def buscar_jornadas(usuario_id):
     with criar_conexao() as conexao:
         registros = conexao.execute(
             """
-            SELECT dia_semana, entrada, intervalo, retorno_intervalo, saida
-            FROM jornadas_usuarios
-            WHERE usuario_id = %s
-            ORDER BY dia_semana
+            SELECT COALESCE(jornada.dia_semana, quantidade.dia_semana),
+                   jornada.entrada, jornada.intervalo,
+                   jornada.retorno_intervalo, jornada.saida, quantidade.quantidade_batidas
+            FROM jornadas_usuarios AS jornada
+            FULL OUTER JOIN jornadas_quantidade_batidas AS quantidade
+              ON quantidade.usuario_id = jornada.usuario_id
+             AND quantidade.dia_semana = jornada.dia_semana
+            WHERE COALESCE(jornada.usuario_id, quantidade.usuario_id) = %s
+            ORDER BY COALESCE(jornada.dia_semana, quantidade.dia_semana)
             """,
             (usuario_id,),
         ).fetchall()
@@ -108,6 +113,7 @@ def buscar_jornadas(usuario_id):
             "intervalo": linha[2],
             "retorno_intervalo": linha[3],
             "saida": linha[4],
+            "quantidade_batidas": linha[5],
         }
         for linha in registros
     ]
@@ -181,6 +187,7 @@ def validar_dados_usuario(formulario):
         "login": formulario.get("login", "").strip(),
         "email": formulario.get("email", "").strip() or None,
         "telefone": telefone or None,
+        "rg": formulario.get("rg", "").strip() or None,
         "funcao": formulario.get("funcao", "").strip() or None,
         "tipo_conta": formulario.get("tipo_conta", "") or "Professor",
     }
@@ -195,6 +202,8 @@ def validar_dados_usuario(formulario):
         return dados, "Use o formato de telefone (xx) xxxxx-xxxx."
     if dados["funcao"] and len(dados["funcao"]) > 100:
         return dados, "A função deve ter no máximo 100 caracteres."
+    if dados["rg"] and len(dados["rg"]) > 30:
+        return dados, "O RG deve ter no máximo 30 caracteres."
     if dados["tipo_conta"] not in TIPOS_CONTA:
         return dados, "Selecione uma permissão válida."
     return dados, None
@@ -251,6 +260,7 @@ def adicionar_usuario():
         "login": "",
         "email": "",
         "telefone": "",
+        "rg": "",
         "tipo_conta": "",
     }
 
@@ -288,16 +298,17 @@ def adicionar_usuario():
             conexao.execute(
                 """
                 INSERT INTO usuarios (
-                    nome_completo, login, email, telefone, tipo_conta, senha_hash,
+                    nome_completo, login, email, telefone, rg, tipo_conta, senha_hash,
                     ativo, deve_trocar_senha, quantidade_batidas, dias_trabalho_semana
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, TRUE, TRUE, %s, 5)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE, TRUE, %s, 5)
                 """,
                 (
                     dados["nome_completo"],
                     dados["login"],
                     dados["email"],
                     dados["telefone"],
+                    dados["rg"],
                     dados["tipo_conta"],
                     generate_password_hash("102030"),
                     2 if dados["tipo_conta"] == "Professor" else 4,
@@ -392,6 +403,7 @@ def editar_usuario(usuario_id):
                         login = %s,
                         email = %s,
                         telefone = %s,
+                        rg = %s,
                         tipo_conta = %s,
                         funcao = %s,
                         ativo = %s,
@@ -403,6 +415,7 @@ def editar_usuario(usuario_id):
                         dados["login"],
                         dados["email"],
                         dados["telefone"],
+                        dados["rg"],
                         dados["tipo_conta"],
                         dados["funcao"],
                         ativo,
@@ -533,6 +546,10 @@ def excluir_jornada(usuario_id, dia):
     with criar_conexao() as conexao:
         conexao.execute(
             "DELETE FROM jornadas_usuarios WHERE usuario_id = %s AND dia_semana = %s",
+            (usuario_id, dia),
+        )
+        conexao.execute(
+            "DELETE FROM jornadas_quantidade_batidas WHERE usuario_id = %s AND dia_semana = %s",
             (usuario_id, dia),
         )
     return redirect(

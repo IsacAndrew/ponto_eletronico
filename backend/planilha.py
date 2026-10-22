@@ -12,6 +12,7 @@ from openpyxl import load_workbook
 from .banco_dados import criar_conexao
 from .estrutura_registros import garantir_indices_registros
 from .jornada import garantir_estrutura_jornada
+from .estrutura_usuarios import garantir_estrutura_usuarios
 from .permissoes import exigir_tipos_conta, renderizar_pagina
 
 rota_planilha = Blueprint("planilha", __name__)
@@ -20,10 +21,11 @@ TIPOS_PERIODO = {"dia", "semana", "mes", "ano"}
 
 
 def buscar_usuarios_exportacao():
+    garantir_estrutura_usuarios()
     with criar_conexao() as conexao:
         return conexao.execute(
             """
-            SELECT id, nome_completo, tipo_conta, ativo
+            SELECT id, nome_completo, tipo_conta, ativo, rg
             FROM usuarios
             ORDER BY nome_completo
             """
@@ -170,10 +172,11 @@ def nome_aba_unico(nome, inicio_mes, titulos_existentes):
 
 
 def preencher_folha(planilha, usuario, jornada, presencas, inicio, fim, inicio_mes):
-    id_usuario, nome, tipo_conta, ativo = usuario
+    id_usuario, nome, tipo_conta, ativo, rg = usuario
     planilha["C2"] = nome
     planilha["D3"] = "Ativo" if ativo else "Inativo"
     planilha["J3"] = tipo_conta
+    planilha["M2"] = rg or ""
     planilha["U5"] = f"{MESES[inicio_mes.month - 1]} / {inicio_mes.year}"
 
     dias_jornada = sorted(jornada)
@@ -197,7 +200,7 @@ def preencher_folha(planilha, usuario, jornada, presencas, inicio, fim, inicio_m
         elif ativo and dia <= hoje and dia.weekday() in jornada:
             planilha.cell(linha, 1, "Ausente")
 
-    for celula in (planilha["C2"], planilha["D3"], planilha["J3"], planilha["R3"], planilha["U5"]):
+    for celula in (planilha["C2"], planilha["D3"], planilha["J3"], planilha["M2"], planilha["R3"], planilha["U5"]):
         alinhamento = copy(celula.alignment)
         alinhamento.shrink_to_fit = True
         celula.alignment = alinhamento

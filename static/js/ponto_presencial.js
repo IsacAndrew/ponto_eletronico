@@ -57,18 +57,32 @@
 
         try {
             const localizacao = await obterLocalizacao();
-            const resposta = await fetch(pagina.dataset.registroUrl, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(localizacao),
-            });
-            const resultado = await resposta.json();
+            let resposta = await enviarRegistro(localizacao);
+            let resultado = await resposta.json();
+            if (resultado.perguntar_quantidade_batidas) {
+                const quantidade = window.prompt(
+                    "Quantas batidas de ponto você possui no dia de hoje? (2, 3 ou 4)"
+                );
+                if (quantidade === null) {
+                    mensagem.textContent = "Registro cancelado. Você pode tentar novamente quando quiser.";
+                    mensagem.dataset.estado = "";
+                    botaoTentar.hidden = false;
+                    return;
+                }
+                resposta = await enviarRegistro({
+                    ...localizacao,
+                    quantidade_batidas_dia: quantidade.trim(),
+                });
+                resultado = await resposta.json();
+            }
             if (!resposta.ok) {
                 const erro = new Error(resultado.mensagem || "Não foi possível registrar seu ponto.");
                 erro.codigoErro = resultado.codigo_erro;
                 throw erro;
             }
-            mensagem.textContent = resultado.mensagem;
+            mensagem.textContent = resultado.confirmacao_quantidade
+                ? "Ok, muito obrigado. Ponto registrado com sucesso pode fechar essa aba"
+                : resultado.mensagem;
             mensagem.dataset.estado = "sucesso";
         } catch (erro) {
             mostrarErro(erro.codigoErro
@@ -77,6 +91,14 @@
         } finally {
             tentativaEmAndamento = false;
         }
+    }
+
+    function enviarRegistro(dados) {
+        return fetch(pagina.dataset.registroUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(dados),
+        });
     }
 
     function criarErroLocalizacao(codigo) {
