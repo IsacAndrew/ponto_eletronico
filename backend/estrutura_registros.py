@@ -23,6 +23,24 @@ def garantir_estrutura_registros():
                 ADD COLUMN IF NOT EXISTS origem_registro TEXT NOT NULL DEFAULT 'site'
                 """
             )
+            conexao.execute(
+                """
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM pg_constraint
+                        WHERE conrelid = 'registros_ponto'::regclass
+                          AND conname = 'registros_ponto_tipo_batida_check'
+                    ) THEN
+                        ALTER TABLE registros_ponto
+                        ADD CONSTRAINT registros_ponto_tipo_batida_check
+                        CHECK (tipo_batida IN (
+                            'Entrada', 'Intervalo', 'Retorno intervalo', 'Saída'
+                        )) NOT VALID;
+                    END IF;
+                END $$;
+                """
+            )
         _estrutura_pronta = True
 
 

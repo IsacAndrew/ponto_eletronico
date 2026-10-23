@@ -125,8 +125,8 @@
                     <form class="formulario-edicao formulario-jornada" method="post" action="{{ url_for('usuarios.salvar_jornada', usuario_id=usuario_edicao.id, filtro=filtro_atual, busca=busca) }}">
                         <label for="quantidade-batidas">Batidas por dia</label>
                         <select id="quantidade-batidas" name="quantidade_batidas" required>
-                            <option value="2" {% if usuario_edicao.quantidade_batidas == 2 %}selected{% endif %}>2 batidas — Entrada e Saída</option>
-                            <option value="4" {% if usuario_edicao.quantidade_batidas == 4 %}selected{% endif %}>4 batidas — Entrada, Intervalo, Retorno e Saída</option>
+                            <option value="2" {% if jornada_edicao.quantidade_batidas == 2 %}selected{% endif %}>2 batidas — Entrada e Saída</option>
+                            <option value="4" {% if jornada_edicao.quantidade_batidas != 2 %}selected{% endif %}>4 batidas — Entrada, Intervalo, Retorno e Saída</option>
                         </select>
                         <label for="dias-trabalho-semana">Dias de trabalho por semana</label>
                         <select id="dias-trabalho-semana" name="dias_trabalho_semana" required>
@@ -159,9 +159,9 @@
                                 <a href="{{ url_for('usuarios.editar_usuario', usuario_id=usuario_edicao.id, filtro=filtro_atual, busca=busca, aba='jornada', dia=jornada.dia_semana) }}">
                                     <strong>{{ jornada.dia_nome }}</strong>
                                     <span>
-                                        {% if jornada.quantidade_batidas %}{{ jornada.quantidade_batidas }} batidas{% if jornada.entrada %} · {% endif %}{% endif %}
+                                        {% if jornada.quantidade_batidas is not none %}{{ jornada.quantidade_batidas }} batidas{% if jornada.entrada %} · {% endif %}{% endif %}
                                         {% if jornada.entrada %}
-                                            {% if usuario_edicao.quantidade_batidas == 2 %}
+                                            {% if jornada.quantidade_batidas == 2 %}
                                                 {{ jornada.entrada.strftime('%H:%M') }} · {{ jornada.saida.strftime('%H:%M') }}
                                             {% else %}
                                                 {{ jornada.entrada.strftime('%H:%M') if jornada.entrada else '—' }} · {{ jornada.intervalo.strftime('%H:%M') if jornada.intervalo else '—' }} · {{ jornada.retorno_intervalo.strftime('%H:%M') if jornada.retorno_intervalo else '—' }} · {{ jornada.saida.strftime('%H:%M') if jornada.saida else '—' }}

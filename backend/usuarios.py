@@ -91,28 +91,53 @@ def buscar_usuario(usuario_id):
 
 
 def buscar_jornadas(usuario_id):
+    garantir_estrutura_jornada()
     with criar_conexao() as conexao:
-        registros = conexao.execute(
+        jornadas_existentes = conexao.execute(
             """
-            SELECT dia_semana, entrada, intervalo, retorno_intervalo, saida
-            FROM jornadas_usuarios
-            WHERE usuario_id = %s
-            ORDER BY dia_semana
+            SELECT jornada.dia_semana, jornada.entrada, jornada.intervalo,
+                   jornada.retorno_intervalo, jornada.saida,
+                   usuario.quantidade_batidas
+            FROM jornadas_usuarios AS jornada
+            JOIN usuarios AS usuario ON usuario.id = jornada.usuario_id
+            WHERE jornada.usuario_id = %s
+            ORDER BY jornada.dia_semana
             """,
             (usuario_id,),
         ).fetchall()
-    return [
-        {
+        quantidades_salvas = conexao.execute(
+            """SELECT dia_semana, quantidade_batidas
+               FROM quantidades_batidas_semanais WHERE usuario_id = %s""",
+            (usuario_id,),
+        ).fetchall()
+
+    jornadas = {
+        linha[0]: {
             "dia_semana": linha[0],
             "dia_nome": DIAS_SEMANA[linha[0]],
             "entrada": linha[1],
             "intervalo": linha[2],
             "retorno_intervalo": linha[3],
             "saida": linha[4],
-            "quantidade_batidas": None,
+            "quantidade_batidas": linha[5],
         }
-        for linha in registros
-    ]
+        for linha in jornadas_existentes
+    }
+    for dia, quantidade in quantidades_salvas:
+        jornada = jornadas.setdefault(
+            dia,
+            {
+                "dia_semana": dia,
+                "dia_nome": DIAS_SEMANA[dia],
+                "entrada": None,
+                "intervalo": None,
+                "retorno_intervalo": None,
+                "saida": None,
+                "quantidade_batidas": quantidade,
+            },
+        )
+        jornada["quantidade_batidas"] = quantidade
+    return [jornadas[dia] for dia in sorted(jornadas)]
 
 
 def renderizar_lista_usuarios(
@@ -341,7 +366,10 @@ def editar_usuario(usuario_id):
         dia = request.args.get("dia", type=int)
         jornada_edicao = next(
             (jornada.copy() for jornada in jornadas if jornada["dia_semana"] == dia),
-            {"dia_semana": dia if dia in range(7) else 0},
+            {
+                "dia_semana": dia if dia in range(7) else 0,
+                "quantidade_batidas": usuario["quantidade_batidas"],
+            },
         )
         return renderizar_lista_usuarios(
             filtro,
@@ -454,6 +482,7 @@ def salvar_jornada(usuario_id):
         quantidade_batidas = dias_trabalho = 0
     valores = {
         "dia_semana": dia,
+        "quantidade_batidas": quantidade_batidas,
         "entrada": request.form.get("entrada", ""),
         "intervalo": request.form.get("intervalo", ""),
         "retorno_intervalo": request.form.get("retorno_intervalo", ""),
@@ -524,6 +553,14 @@ def salvar_jornada(usuario_id):
                 valores["saida"],
             ),
         )
+        conexao.execute(
+            """INSERT INTO quantidades_batidas_semanais
+               (usuario_id, dia_semana, quantidade_batidas)
+               VALUES (%s, %s, %s)
+               ON CONFLICT (usuario_id, dia_semana)
+               DO UPDATE SET quantidade_batidas = EXCLUDED.quantidade_batidas""",
+            (usuario_id, dia, quantidade_batidas),
+        )
     return redirect(
         url_for(
             "usuarios.editar_usuario",
@@ -544,6 +581,14 @@ def excluir_jornada(usuario_id, dia):
     with criar_conexao() as conexao:
         conexao.execute(
             "DELETE FROM jornadas_usuarios WHERE usuario_id = %s AND dia_semana = %s",
+            (usuario_id, dia),
+        )
+        conexao.execute(
+            """INSERT INTO quantidades_batidas_semanais
+               (usuario_id, dia_semana, quantidade_batidas)
+               VALUES (%s, %s, 0)
+               ON CONFLICT (usuario_id, dia_semana)
+               DO UPDATE SET quantidade_batidas = 0""",
             (usuario_id, dia),
         )
     return redirect(

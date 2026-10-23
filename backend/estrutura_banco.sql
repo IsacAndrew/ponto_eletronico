@@ -68,6 +68,21 @@ ADD COLUMN IF NOT EXISTS usuario_nome TEXT;
 ALTER TABLE registros_ponto
 ADD COLUMN IF NOT EXISTS origem_registro TEXT NOT NULL DEFAULT 'site';
 
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conrelid = 'registros_ponto'::regclass
+          AND conname = 'registros_ponto_tipo_batida_check'
+    ) THEN
+        ALTER TABLE registros_ponto
+        ADD CONSTRAINT registros_ponto_tipo_batida_check
+        CHECK (tipo_batida IN (
+            'Entrada', 'Intervalo', 'Retorno intervalo', 'Saída'
+        )) NOT VALID;
+    END IF;
+END $$;
+
 UPDATE registros_ponto AS registro
 SET usuario_nome = usuario.nome_completo
 FROM usuarios AS usuario
