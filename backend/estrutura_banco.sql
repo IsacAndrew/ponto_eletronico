@@ -65,6 +65,9 @@ ON registros_ponto (data_ponto, usuario_id);
 ALTER TABLE registros_ponto
 ADD COLUMN IF NOT EXISTS usuario_nome TEXT;
 
+ALTER TABLE registros_ponto
+ADD COLUMN IF NOT EXISTS origem_registro TEXT NOT NULL DEFAULT 'site';
+
 UPDATE registros_ponto AS registro
 SET usuario_nome = usuario.nome_completo
 FROM usuarios AS usuario

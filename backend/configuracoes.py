@@ -109,18 +109,29 @@ def salvar_perfil():
     if not re.fullmatch(r"\(\d{2}\) \d{5}-\d{4}", telefone):
         return redirect(url_for("configuracoes.exibir_configuracoes", perfil="telefone_invalido"))
 
-    with criar_conexao() as conexao:
-        conflito = conexao.execute(
-            "SELECT id FROM usuarios WHERE id <> %s AND (login = %s OR email = %s) LIMIT 1",
-            (usuario_id, login, email),
-        ).fetchone()
-        if conflito:
-            return redirect(url_for("configuracoes.exibir_configuracoes", perfil="duplicado"))
-        conexao.execute(
-            """UPDATE usuarios SET nome_completo = %s, login = %s, email = %s, telefone = %s, rg = %s
-               WHERE id = %s""",
-            (nome, login, email, telefone, rg, usuario_id),
-        )
+    try:
+        with criar_conexao() as conexao:
+            conflito = conexao.execute(
+                """
+                SELECT id FROM usuarios
+                WHERE id <> %s
+                  AND (
+                      LOWER(BTRIM(login)) = LOWER(BTRIM(%s))
+                      OR LOWER(BTRIM(email)) = LOWER(BTRIM(%s))
+                  )
+                LIMIT 1
+                """,
+                (usuario_id, login, email),
+            ).fetchone()
+            if conflito:
+                return redirect(url_for("configuracoes.exibir_configuracoes", perfil="duplicado"))
+            conexao.execute(
+                """UPDATE usuarios SET nome_completo = %s, login = %s, email = %s, telefone = %s, rg = %s
+                   WHERE id = %s""",
+                (nome, login, email, telefone, rg, usuario_id),
+            )
+    except UniqueViolation:
+        return redirect(url_for("configuracoes.exibir_configuracoes", perfil="duplicado"))
     session["usuario_nome"] = nome
     return redirect(url_for("configuracoes.exibir_configuracoes", perfil="salvo"))
 

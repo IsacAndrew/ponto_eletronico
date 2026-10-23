@@ -9,6 +9,7 @@ from .permissoes import exigir_tipos_conta, renderizar_pagina
 from .banco_dados import criar_conexao
 from .localizacao import calcular_distancia_metros, obter_marco_zero
 from .jornada import garantir_estrutura_jornada
+from .estrutura_registros import garantir_estrutura_registros
 from .estrutura_usuarios import garantir_estrutura_usuarios
 
 rota_inicio = Blueprint("inicio", __name__)
@@ -95,6 +96,7 @@ def _registrar_ponto(exigir_localizacao):
         latitude = longitude = precisao = None
 
     garantir_estrutura_jornada()
+    garantir_estrutura_registros()
     garantir_estrutura_usuarios()
     with criar_conexao() as conexao:
         with conexao.cursor() as cursor:
@@ -256,9 +258,10 @@ def _registrar_ponto(exigir_localizacao):
             cursor.execute(
                 """
                 INSERT INTO registros_ponto (
-                    usuario_id, usuario_nome, data_ponto, tipo_batida, registrado_em
+                    usuario_id, usuario_nome, data_ponto, tipo_batida, registrado_em,
+                    origem_registro
                 )
-                VALUES (%s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 """,
                 (
                     usuario_id,
@@ -266,6 +269,7 @@ def _registrar_ponto(exigir_localizacao):
                     agora.date(),
                     tipo_batida,
                     agora,
+                    "site" if exigir_localizacao else "qr",
                 ),
             )
 
