@@ -8,7 +8,7 @@ MENU_ADMINISTRACAO = [
     ("Início", "inicio.exibir_inicio", "inicio", "casa"),
     ("Usuários", "usuarios.exibir_usuarios", "usuarios", "pessoas"),
     ("Planilha", "planilha.exibir_planilha", "planilha", "planilha"),
-    ("Histórico de Batidas", "ponto_hoje.exibir_historico_batidas", "historico_batidas", "relogio"),
+    ("Histórico", "ponto_hoje.exibir_historico_batidas", "historico_batidas", "relogio"),
     (
         "Configurações",
         "configuracoes.exibir_configuracoes",
