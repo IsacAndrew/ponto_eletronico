@@ -21,6 +21,12 @@
     font-weight: 600;
 }
 
+.erro-filtro-ponto-hoje {
+    margin: 0 auto 16px !important;
+    color: #9a3d3d !important;
+    text-align: center;
+}
+
 .campo-busca-ponto-hoje {
     display: flex;
     gap: 9px;

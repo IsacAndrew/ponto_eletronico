@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block titulo %}Ponto Hoje | Ponto Eletrônico{% endblock %}
+{% block titulo %}Histórico de Batidas | Ponto Eletrônico{% endblock %}
 
 {% block estilos_pagina %}
     <link rel="stylesheet" href="/static/css/ponto_hoje.css">
@@ -9,12 +9,13 @@
 
 {% block conteudo %}
     <section class="cartao-pagina cartao-ponto-hoje" data-data-hoje="{{ data_hoje }}">
-        <h1>Ponto Hoje</h1>
-        <form class="busca-ponto-hoje" method="get" action="{{ url_for('ponto_hoje.exibir_ponto_hoje') }}">
-            <label for="busca-ponto-hoje">Pesquisar pelo nome</label>
+        <h1>Histórico de Batidas</h1>
+        {% if erro_filtro %}<p class="erro-filtro-ponto-hoje" role="alert">{{ erro_filtro }}</p>{% endif %}
+        <form class="busca-ponto-hoje" method="get" action="{{ url_for('ponto_hoje.exibir_historico_batidas') }}">
+            <label for="data-ponto-hoje">Selecionar um dia (DD-MM-AAAA)</label>
             <div class="campo-busca-ponto-hoje">
-                <input id="busca-ponto-hoje" name="busca" type="search" value="{{ busca }}" autocomplete="off">
-                <button type="submit">Buscar</button>
+                <input id="data-ponto-hoje" name="data" type="text" inputmode="numeric" placeholder="DD-MM-AAAA" pattern="[0-9]{2}-[0-9]{2}-[0-9]{4}" title="Use o formato DD-MM-AAAA" value="{{ data_exibicao }}" autocomplete="off" required>
+                <button type="submit">Consultar dia</button>
             </div>
         </form>
         <div class="tabela-ponto-hoje-conteiner">
@@ -37,7 +38,7 @@
                             {% endfor %}
                         </tr>
                     {% else %}
-                        <tr><td class="sem-registros" colspan="5">Nenhuma batida encontrada hoje.</td></tr>
+                        <tr><td class="sem-registros" colspan="5">Nenhuma batida encontrada em {{ data_exibicao }}.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
