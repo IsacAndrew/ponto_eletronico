@@ -7,7 +7,8 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from flask import Blueprint, request, send_file
-from openpyxl import load_workbook
+from openpyxl import Workbook, load_workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 
 from .banco_dados import criar_conexao
 from .estrutura_registros import garantir_indices_registros
@@ -246,6 +247,64 @@ def criar_planilha(registros, jornadas, usuarios, inicio, fim):
     return arquivo
 
 
+def criar_planilha_controle_acesso():
+    garantir_estrutura_usuarios()
+    with criar_conexao() as conexao:
+        usuarios = conexao.execute(
+            """
+            SELECT nome_completo, ultimo_acesso
+            FROM usuarios
+            WHERE tipo_conta = 'Professor'
+            ORDER BY nome_completo
+            """
+        ).fetchall()
+
+    workbook = Workbook()
+    planilha = workbook.active
+    planilha.title = "Controle de acesso"
+    planilha.append(("Nome do professor", "Último acesso", "Já acessou o sistema?"))
+
+    cor_cabecalho = "31425E"
+    preenchimento_cabecalho = PatternFill("solid", fgColor=cor_cabecalho)
+    borda_linha = Border(bottom=Side(style="thin", color="DCE4E1"))
+    for celula in planilha[1]:
+        celula.fill = preenchimento_cabecalho
+        celula.font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+        celula.alignment = Alignment(vertical="center")
+
+    for nome, ultimo_acesso in usuarios:
+        acessou = ultimo_acesso is not None
+        if acessou:
+            ultimo_acesso = ultimo_acesso.astimezone(FUSO_HORARIO).replace(tzinfo=None)
+        else:
+            ultimo_acesso = "Nunca acessou"
+        planilha.append((nome, ultimo_acesso, "Sim" if acessou else "Não"))
+        linha = planilha.max_row
+        for celula in planilha[linha]:
+            celula.border = borda_linha
+            celula.alignment = Alignment(vertical="center")
+        if acessou:
+            planilha.cell(linha, 2).number_format = "dd/mm/yyyy hh:mm"
+
+    planilha.column_dimensions["A"].width = 42
+    planilha.column_dimensions["B"].width = 24
+    planilha.column_dimensions["C"].width = 28
+    planilha.row_dimensions[1].height = 25
+    planilha.freeze_panes = "A2"
+    planilha.auto_filter.ref = f"A1:C{planilha.max_row}"
+    planilha.sheet_view.showGridLines = False
+    planilha.print_title_rows = "1:1"
+    planilha.page_setup.orientation = "landscape"
+    planilha.page_setup.fitToWidth = 1
+    planilha.page_setup.fitToHeight = 0
+    planilha.sheet_properties.pageSetUpPr.fitToPage = True
+
+    arquivo = BytesIO()
+    workbook.save(arquivo)
+    arquivo.seek(0)
+    return arquivo
+
+
 def dados_formulario(formulario):
     return {
         "periodo": formulario.get("periodo", "dia"),
@@ -313,4 +372,16 @@ def exibir_planilha():
         colaboradores=buscar_usuarios_exportacao(),
         campos=campos,
         erro_planilha=erro,
+    )
+
+
+@rota_planilha.get("/planilha/controle-acesso")
+@exigir_tipos_conta("Suporte")
+def baixar_controle_acesso():
+    arquivo = criar_planilha_controle_acesso()
+    return send_file(
+        arquivo,
+        as_attachment=True,
+        download_name="controle_de_acesso.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )

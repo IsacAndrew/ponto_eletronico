@@ -76,6 +76,11 @@
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3v12m0 0 4-4m-4 4-4-4"></path><path d="M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"></path></svg>
                 Baixar a planilha
             </button>
+            {% if conta_suporte and not modo_visualizacao %}
+                <a class="botao-controle-acesso" href="{{ url_for('planilha.baixar_controle_acesso') }}">
+                    Baixar controle de acesso
+                </a>
+            {% endif %}
         </div>
     </form>
 </section>
