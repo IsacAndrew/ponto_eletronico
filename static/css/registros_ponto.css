@@ -23,8 +23,6 @@
 .acoes-filtro-registros { display: flex; align-items: center; justify-content: flex-end; gap: 12px; grid-column: 1 / -1; }
 .acoes-filtro-registros a { color: #52647a; font-size: .86rem; }
 .acoes-filtro-registros button, .botao-salvar-registro, .botao-excluir-registro { min-height: 38px; padding: 8px 12px; border: 0; border-radius: 8px; background: #31445c; color: #fff; font: inherit; font-size: .83rem; font-weight: 650; cursor: pointer; }
-.total-registros-ponto { margin: 17px 0 4px; color: #64758a; font-size: .83rem; }
-.instrucao-registros-ponto { margin: 0 0 9px; color: #718096; font-size: .78rem; }
 .tabela-registros-ponto { overflow-x: auto; border: 1px solid #dbe3ec; border-radius: 11px; background: #fff; }
 .tabela-registros-ponto table { width: 100%; min-width: 850px; border-collapse: collapse; text-align: left; }
 .tabela-registros-ponto th, .tabela-registros-ponto td { padding: 9px 10px; border-bottom: 1px solid #e8edf2; vertical-align: middle; }

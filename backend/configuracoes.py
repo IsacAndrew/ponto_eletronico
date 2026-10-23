@@ -192,7 +192,8 @@ def salvar_marco_zero():
 def exibir_registros_ponto():
     filtros = obter_filtros_registros(request.args)
     erro = None
-    data_filtro_exibicao = filtros["data"]
+    hoje = datetime.now(FUSO_HORARIO).date()
+    data_filtro_exibicao = hoje.strftime("%d/%m/%Y")
     if filtros["data"]:
         try:
             try:
@@ -202,9 +203,11 @@ def exibir_registros_ponto():
             filtros["data"] = data_filtro.isoformat()
             data_filtro_exibicao = data_filtro.strftime("%d/%m/%Y")
         except ValueError:
-            filtros["data"] = ""
-            data_filtro_exibicao = ""
+            filtros["data"] = hoje.isoformat()
+            data_filtro_exibicao = hoje.strftime("%d/%m/%Y")
             erro = "Informe uma data válida."
+    else:
+        filtros["data"] = hoje.isoformat()
     registros = buscar_registros_ponto(filtros)
     return renderizar_pagina(
         "registros_ponto.html",
