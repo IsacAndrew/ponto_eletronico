@@ -38,6 +38,13 @@ app.config.update(
 )
 
 
+@app.after_request
+def adicionar_cabecalhos_seguranca(resposta):
+    resposta.headers["X-Content-Type-Options"] = "nosniff"
+    resposta.headers["Referrer-Policy"] = "strict-origin"
+    return resposta
+
+
 @app.get("/health/database")
 def verificar_banco():
     try:
