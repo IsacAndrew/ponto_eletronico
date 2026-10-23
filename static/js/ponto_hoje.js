@@ -1,17 +1,9 @@
 const cartaoPontoHoje = document.querySelector(".cartao-ponto-hoje");
 const campoDataPonto = document.querySelector("#data-ponto-hoje");
+const formularioFiltroHistorico = document.querySelector(".formulario-filtro-historico");
 
-if (campoDataPonto) {
-    campoDataPonto.addEventListener("input", () => {
-        const digitos = campoDataPonto.value.replace(/\D/g, "").slice(0, 8);
-        if (digitos.length <= 2) {
-            campoDataPonto.value = digitos;
-        } else if (digitos.length <= 4) {
-            campoDataPonto.value = `${digitos.slice(0, 2)}-${digitos.slice(2)}`;
-        } else {
-            campoDataPonto.value = `${digitos.slice(0, 2)}-${digitos.slice(2, 4)}-${digitos.slice(4)}`;
-        }
-    });
+if (campoDataPonto && formularioFiltroHistorico) {
+    campoDataPonto.addEventListener("change", () => formularioFiltroHistorico.requestSubmit());
 }
 
 function dataAtualDaEscola() {

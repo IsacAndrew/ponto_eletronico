@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 from flask import Blueprint, redirect, request, url_for
@@ -63,7 +63,10 @@ def exibir_historico_batidas():
     valor_data = request.args.get("data", "").strip()
     if valor_data:
         try:
-            data_consulta = datetime.strptime(valor_data, "%d-%m-%Y").date()
+            try:
+                data_consulta = date.fromisoformat(valor_data)
+            except ValueError:
+                data_consulta = datetime.strptime(valor_data, "%d-%m-%Y").date()
             if data_consulta > hoje:
                 raise ValueError
         except ValueError:
@@ -75,6 +78,8 @@ def exibir_historico_batidas():
         "historico_batidas",
         registros=buscar_batidas_do_dia(data_consulta),
         data_exibicao=data_consulta.strftime("%d-%m-%Y"),
+        data_consulta_iso=data_consulta.isoformat(),
         data_hoje=hoje.isoformat(),
         erro_filtro=erro_filtro,
+        filtro_aberto=bool(valor_data or erro_filtro),
     )

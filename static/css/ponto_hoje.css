@@ -8,31 +8,53 @@
     text-align: center;
 }
 
-.busca-ponto-hoje {
+.filtro-data-historico {
+    position: relative;
     width: min(100%, 560px);
     margin-bottom: 18px;
 }
 
-.busca-ponto-hoje > label {
-    display: block;
-    margin-bottom: 7px;
+.filtro-data-historico summary {
+    display: flex;
+    width: min(100%, 280px);
+    min-height: 44px;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 13px;
+    border: 1px solid #cbd6d1;
+    border-radius: 8px;
+    background: #fbfcfb;
+    color: #344b63;
+    font-size: .9rem;
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+}
+
+.filtro-data-historico summary::-webkit-details-marker { display: none; }
+.filtro-data-historico summary::after { margin-left: auto; color: #60758b; content: "⌄"; font-size: 1.2rem; }
+.filtro-data-historico[open] summary::after { transform: rotate(180deg); }
+.filtro-data-historico summary small { color: #687b8f; font-size: .78rem; font-weight: 500; }
+
+.formulario-filtro-historico {
+    display: grid;
+    width: min(100%, 360px);
+    gap: 9px;
+    margin-top: 8px;
+    padding: 14px;
+    border: 1px solid #d7e0dc;
+    border-radius: 9px;
+    background: #fbfcfb;
+    box-shadow: 0 10px 24px rgb(37 55 79 / 8%);
+}
+
+.formulario-filtro-historico label {
     color: #405064;
-    font-size: .86rem;
+    font-size: .83rem;
     font-weight: 600;
 }
 
-.erro-filtro-ponto-hoje {
-    margin: 0 auto 16px !important;
-    color: #9a3d3d !important;
-    text-align: center;
-}
-
-.campo-busca-ponto-hoje {
-    display: flex;
-    gap: 9px;
-}
-
-.campo-busca-ponto-hoje input {
+.formulario-filtro-historico input {
     width: 100%;
     min-width: 0;
     min-height: 44px;
@@ -43,7 +65,7 @@
     font: inherit;
 }
 
-.campo-busca-ponto-hoje button {
+.formulario-filtro-historico button {
     min-height: 44px;
     padding: 0 16px;
     border: 1px solid #31445c;
@@ -54,6 +76,8 @@
     font-weight: 600;
     cursor: pointer;
 }
+
+.erro-filtro-ponto-hoje { margin: 0 auto 16px !important; color: #9a3d3d !important; text-align: center; }
 
 .tabela-ponto-hoje-conteiner {
     overflow-x: auto;
@@ -152,11 +176,5 @@
         display: block;
         grid-column: 1 / -1;
         text-align: center;
-    }
-}
-
-@media (max-width: 380px) {
-    .campo-busca-ponto-hoje {
-        flex-direction: column;
     }
 }
