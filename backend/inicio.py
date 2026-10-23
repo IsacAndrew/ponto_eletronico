@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta
+from hmac import compare_digest
 from math import isfinite
 from zoneinfo import ZoneInfo
 
-from flask import Blueprint, current_app, jsonify, request, session
+from flask import Blueprint, abort, current_app, jsonify, request, session
 
 from .permissoes import exigir_tipos_conta, renderizar_pagina
 from .banco_dados import criar_conexao
@@ -48,33 +49,52 @@ def exibir_inicio():
 @rota_inicio.post("/registrar-ponto")
 @exigir_tipos_conta("Suporte", "Administração", "Professor", "Colaborador")
 def registrar_ponto():
+    return _registrar_ponto(exigir_localizacao=True)
+
+
+@rota_inicio.post("/registrar-ponto-qr/<token>")
+@exigir_tipos_conta("Suporte", "Administração", "Professor", "Colaborador")
+def registrar_ponto_qr(token):
+    with criar_conexao() as conexao:
+        registro_qr = conexao.execute(
+            "SELECT qr_ponto_token FROM configuracoes_sistema WHERE id = 1"
+        ).fetchone()
+    if not registro_qr or not registro_qr[0] or not compare_digest(registro_qr[0], token):
+        abort(404)
+    return _registrar_ponto(exigir_localizacao=False)
+
+
+def _registrar_ponto(exigir_localizacao):
     usuario_id = session["usuario_id"]
     agora = datetime.now(FUSO_HORARIO)
     dados_localizacao = request.get_json(silent=True) or {}
-    try:
-        latitude = float(dados_localizacao.get("latitude"))
-        longitude = float(dados_localizacao.get("longitude"))
-        precisao = float(dados_localizacao.get("precisao"))
-    except (TypeError, ValueError):
-        current_app.logger.warning("PONTO_E01: localização ausente ou inválida")
-        return jsonify(
-            sucesso=False,
-            codigo_erro="E01",
-            mensagem="Localização inválida. Informe o código E01 ao suporte.",
-        ), 400
+    if exigir_localizacao:
+        try:
+            latitude = float(dados_localizacao.get("latitude"))
+            longitude = float(dados_localizacao.get("longitude"))
+            precisao = float(dados_localizacao.get("precisao"))
+        except (TypeError, ValueError):
+            current_app.logger.warning("PONTO_E01: localização ausente ou inválida")
+            return jsonify(
+                sucesso=False,
+                codigo_erro="E01",
+                mensagem="Localização inválida. Informe o código E01 ao suporte.",
+            ), 400
 
-    if (
-        not all(isfinite(valor) for valor in (latitude, longitude, precisao))
-        or not -90 <= latitude <= 90
-        or not -180 <= longitude <= 180
-        or precisao <= 0
-    ):
-        current_app.logger.warning("PONTO_E01: coordenadas ou precisão fora do formato esperado")
-        return jsonify(
-            sucesso=False,
-            codigo_erro="E01",
-            mensagem="Não foi possível validar a localização. Informe o código E01 ao suporte.",
-        ), 400
+        if (
+            not all(isfinite(valor) for valor in (latitude, longitude, precisao))
+            or not -90 <= latitude <= 90
+            or not -180 <= longitude <= 180
+            or precisao <= 0
+        ):
+            current_app.logger.warning("PONTO_E01: coordenadas ou precisão fora do formato esperado")
+            return jsonify(
+                sucesso=False,
+                codigo_erro="E01",
+                mensagem="Não foi possível validar a localização. Informe o código E01 ao suporte.",
+            ), 400
+    else:
+        latitude = longitude = precisao = None
 
     garantir_estrutura_jornada()
     garantir_estrutura_usuarios()
@@ -97,7 +117,7 @@ def registrar_ponto():
                 )
             tipos_batida = ("Entrada", "Saída") if usuario[1] == 2 else TIPOS_BATIDA
 
-            if not usuario[2]:
+            if exigir_localizacao and not usuario[2]:
                 marco_zero = obter_marco_zero(conexao)
                 latitude_marco, longitude_marco, _, raio_metros = marco_zero
                 if latitude_marco is None or longitude_marco is None:

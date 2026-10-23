@@ -242,7 +242,7 @@ def exibir_ponto_presencial(token):
             )
 
     resposta = make_response(
-        render_template("ponto_presencial.html", nome_usuario=usuario[1])
+        render_template("ponto_presencial.html", nome_usuario=usuario[1], token=token)
     )
     if definir_cookie:
         resposta.set_cookie(

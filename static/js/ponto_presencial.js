@@ -22,42 +22,16 @@
         botaoTentar.hidden = false;
     }
 
-    function obterLocalizacao() {
-        return new Promise((resolver, rejeitar) => {
-            if (!navigator.geolocation) {
-                rejeitar(criarErroLocalizacao("E08"));
-                return;
-            }
-
-            navigator.geolocation.getCurrentPosition(
-                (posicao) => resolver({
-                    latitude: posicao.coords.latitude,
-                    longitude: posicao.coords.longitude,
-                    precisao: posicao.coords.accuracy,
-                }),
-                (erro) => {
-                    const codigos = {
-                        1: "E05",
-                        2: "E06",
-                        3: "E07",
-                    };
-                    rejeitar(criarErroLocalizacao(codigos[erro.code] || "E06"));
-                },
-                { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
-            );
-        });
-    }
-
     async function registrarPonto() {
         if (tentativaEmAndamento) return;
         tentativaEmAndamento = true;
         botaoTentar.hidden = true;
-        mensagem.textContent = "Confirmando sua localização…";
+        mensagem.textContent = "Registrando seu ponto…";
         mensagem.dataset.estado = "";
 
         try {
-            const localizacao = await obterLocalizacao();
-            let resposta = await enviarRegistro(localizacao);
+            const dadosRegistro = {};
+            let resposta = await enviarRegistro(dadosRegistro);
             let resultado = await resposta.json();
             if (resultado.perguntar_quantidade_batidas) {
                 const quantidade = window.prompt(
@@ -70,7 +44,7 @@
                     return;
                 }
                 resposta = await enviarRegistro({
-                    ...localizacao,
+                    ...dadosRegistro,
                     quantidade_batidas_dia: quantidade.trim(),
                 });
                 resultado = await resposta.json();
@@ -99,12 +73,6 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(dados),
         });
-    }
-
-    function criarErroLocalizacao(codigo) {
-        const erro = new Error(`Erro ${codigo} - Informe o Isac sobre este código.`);
-        erro.codigoErro = codigo;
-        return erro;
     }
 
     atualizarRelogio();

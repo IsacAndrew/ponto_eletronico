@@ -11,16 +11,14 @@
 <body>
     <main
         class="pagina-ponto-presencial"
-        data-registro-url="{{ url_for('inicio.registrar_ponto') }}"
+        data-registro-url="{{ url_for('inicio.registrar_ponto_qr', token=token) }}"
     >
         <section class="cartao-ponto-presencial" aria-labelledby="titulo-ponto-presencial">
             <h1 id="titulo-ponto-presencial">Olá, {{ nome_usuario.split()[0] }}</h1>
             <p class="relogio-presencial" data-relogio>--:--:--</p>
-            <p class="estado-ponto-presencial" data-mensagem role="status" aria-live="polite">
-                Preparando o registro do seu ponto…
-            </p>
+            <p class="estado-ponto-presencial" data-mensagem role="status" aria-live="polite">Preparando o registro do seu ponto…</p>
             <button type="button" class="botao-tentar-novamente" data-tentar hidden>Tentar novamente</button>
-            <p class="nota-ponto-presencial">Mantenha a localização do celular ativada e esteja dentro da escola.</p>
+            <p class="nota-ponto-presencial">Registro presencial autorizado pelo QR-Code da escola.</p>
         </section>
     </main>
 </body>
