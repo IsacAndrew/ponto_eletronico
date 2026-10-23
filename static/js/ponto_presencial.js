@@ -34,9 +34,14 @@
             let resposta = await enviarRegistro(dadosRegistro);
             let resultado = await resposta.json();
             if (resultado.perguntar_quantidade_batidas) {
-                const confirmou = window.confirm("Hoje você possui 4 batidas?");
+                const confirmou = window.confirm("Você possui 4 batidas de ponto no dia de hoje?");
                 if (!confirmou) {
-                    mensagem.textContent = "Registro cancelado. Você pode tentar novamente quando quiser.";
+                    mostrarErro("As 2 batidas de hoje já foram registradas. Se você acredita que há algo errado, fale com o Isac.");
+                    return;
+                }
+                const quantidades = await window.abrirAjusteBatidas(resultado.quantidades_semanais);
+                if (!quantidades) {
+                    mensagem.textContent = "Ajuste cancelado. Nenhum ponto foi registrado.";
                     mensagem.dataset.estado = "";
                     botaoTentar.hidden = false;
                     return;
@@ -44,6 +49,7 @@
                 resposta = await enviarRegistro({
                     ...dadosRegistro,
                     quatro_batidas_hoje: true,
+                    quantidades_semanais: quantidades,
                 });
                 resultado = await resposta.json();
             }
@@ -51,7 +57,7 @@
                 throw new Error(resultado.mensagem || "Não foi possível registrar seu ponto.");
             }
             mensagem.textContent = resultado.confirmacao_quantidade
-                ? "Ok, muito obrigado. Ponto registrado com sucesso pode fechar essa aba"
+                ? "Ponto registrado com sucesso."
                 : resultado.mensagem;
             mensagem.dataset.estado = "sucesso";
         } catch (erro) {

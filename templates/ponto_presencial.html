@@ -6,6 +6,8 @@
     <meta name="theme-color" content="#31425e">
     <title>Registrar ponto | Ponto Batista</title>
     <link rel="stylesheet" href="/static/css/ponto_presencial.css">
+    <link rel="stylesheet" href="/static/css/ajuste_batidas.css">
+    <script src="/static/js/ajuste_batidas.js" defer></script>
     <script src="/static/js/ponto_presencial.js" defer></script>
 </head>
 <body>
@@ -21,5 +23,6 @@
             <p class="nota-ponto-presencial">Registro presencial autorizado pelo QR-Code da escola.</p>
         </section>
     </main>
+    {% include "ajuste_batidas.html" %}
 </body>
 </html>

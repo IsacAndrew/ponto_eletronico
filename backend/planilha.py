@@ -137,6 +137,29 @@ def buscar_jornadas(ids_usuarios=None):
         jornadas.setdefault(id_usuario, {})[dia] = (
             entrada, intervalo, retorno, saida, quantidade
         )
+
+    consulta_quantidades = """
+        SELECT usuario_id, dia_semana, quantidade_batidas
+        FROM quantidades_batidas_semanais
+    """
+    parametros_quantidades = []
+    if ids_usuarios is not None:
+        consulta_quantidades += " WHERE usuario_id = ANY(%s)"
+        parametros_quantidades.append(ids_usuarios)
+    with criar_conexao() as conexao:
+        with conexao.cursor() as cursor:
+            cursor.execute(consulta_quantidades, parametros_quantidades)
+            quantidades_semanais = cursor.fetchall()
+
+    for id_usuario, dia, quantidade in quantidades_semanais:
+        jornada_existente = jornadas.setdefault(id_usuario, {}).get(dia)
+        if jornada_existente:
+            entrada, intervalo, retorno, saida, _ = jornada_existente
+            jornadas[id_usuario][dia] = (entrada, intervalo, retorno, saida, quantidade)
+        elif quantidade:
+            jornadas[id_usuario][dia] = (None, None, None, None, quantidade)
+        else:
+            jornadas.get(id_usuario, {}).pop(dia, None)
     return jornadas
 
 

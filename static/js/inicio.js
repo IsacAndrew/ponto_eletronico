@@ -21,11 +21,17 @@ async function registrarPonto() {
         let resultado = await resposta.json();
 
         if (resultado.perguntar_quantidade_batidas) {
-            const confirmou = window.confirm("Hoje você possui 4 batidas?");
-            if (!confirmou) return;
+            const confirmou = window.confirm("Você possui 4 batidas de ponto no dia de hoje?");
+            if (!confirmou) {
+                window.alert("As 2 batidas de hoje já foram registradas. Se você acredita que há algo errado, fale com o Isac.");
+                return;
+            }
+            const quantidades = await window.abrirAjusteBatidas(resultado.quantidades_semanais);
+            if (!quantidades) return;
             resposta = await enviarRegistro({
                 ...localizacao,
                 quatro_batidas_hoje: true,
+                quantidades_semanais: quantidades,
             });
             resultado = await resposta.json();
         }
@@ -36,7 +42,7 @@ async function registrarPonto() {
 
         ultimoRegistro.textContent = `Último registro: ${resultado.horario} / ${resultado.tipo_batida}`;
         if (resultado.confirmacao_quantidade) {
-            window.alert("Ok, muito obrigado. Ponto registrado com sucesso pode fechar essa aba");
+            window.alert("Ponto registrado com sucesso.");
         }
     } catch (erro) {
         window.alert(mensagemErroPonto(erro));

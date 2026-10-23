@@ -4,6 +4,8 @@
 
 {% block estilos_pagina %}
     <link rel="stylesheet" href="/static/css/inicio.css">
+    <link rel="stylesheet" href="/static/css/ajuste_batidas.css">
+    <script src="/static/js/ajuste_batidas.js" defer></script>
     <script src="/static/js/inicio.js" defer></script>
 {% endblock %}
 
@@ -20,6 +22,8 @@
         </p>
         <button class="botao-registrar" id="botao-registrar" type="button">Registrar</button>
     </section>
+
+    {% include "ajuste_batidas.html" %}
 
     {% if tipo_conta in ["Professor", "Colaborador", "Suporte"] %}
         <a class="atalho-suporte" href="{{ url_for('chat_suporte.exibir_chat_suporte') }}"
