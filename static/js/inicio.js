@@ -21,13 +21,11 @@ async function registrarPonto() {
         let resultado = await resposta.json();
 
         if (resultado.perguntar_quantidade_batidas) {
-            const quantidade = window.prompt(
-                "Quantas batidas de ponto você possui no dia de hoje? (2, 3 ou 4)"
-            );
-            if (quantidade === null) return;
+            const confirmou = window.confirm("Hoje você possui 4 batidas?");
+            if (!confirmou) return;
             resposta = await enviarRegistro({
                 ...localizacao,
-                quantidade_batidas_dia: quantidade.trim(),
+                quatro_batidas_hoje: true,
             });
             resultado = await resposta.json();
         }

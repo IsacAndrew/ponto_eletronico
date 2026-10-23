@@ -166,9 +166,9 @@ def _registrar_ponto(exigir_localizacao):
             quantidade_batidas, ultima_batida = cursor.fetchone()
 
             cursor.execute(
-                """SELECT quantidade_batidas FROM jornadas_quantidade_batidas
-                   WHERE usuario_id = %s AND dia_semana = %s""",
-                (usuario_id, agora.weekday()),
+                """SELECT quantidade_batidas FROM ajustes_batidas_diarias
+                   WHERE usuario_id = %s AND data_ponto = %s""",
+                (usuario_id, agora.date()),
             )
             ajuste_dia = cursor.fetchone()
             quantidade_prevista = ajuste_dia[0] if ajuste_dia else len(tipos_batida)
@@ -185,44 +185,27 @@ def _registrar_ponto(exigir_localizacao):
                     mensagem="Aguarde pelo menos 5 minutos entre uma batida e outra.",
                 ), 409
 
-            quantidade_informada = dados_localizacao.get("quantidade_batidas_dia")
+            if quantidade_batidas >= len(TIPOS_BATIDA):
+                return jsonify(
+                    sucesso=False,
+                    mensagem="As 4 batidas de hoje já foram registradas.",
+                ), 409
+
+            confirmou_quatro_batidas = dados_localizacao.get("quatro_batidas_hoje") is True
             confirmar_quantidade = False
-            if quantidade_informada is not None:
-                if usuario[3] != "Professor" or quantidade_batidas < quantidade_prevista:
+            if confirmou_quatro_batidas:
+                if quantidade_batidas < quantidade_prevista:
                     return jsonify(sucesso=False, mensagem="Ajuste de batidas não solicitado."), 400
-                try:
-                    quantidade_informada = int(quantidade_informada)
-                except (TypeError, ValueError):
-                    quantidade_informada = 0
-                if quantidade_informada not in {2, 3, 4}:
-                    return jsonify(sucesso=False, mensagem="Informe 2, 3 ou 4 batidas."), 400
-                if quantidade_informada <= quantidade_batidas:
-                    return jsonify(
-                        sucesso=False,
-                        mensagem=(
-                            f"Você informou {quantidade_informada} batidas, mas já registrou "
-                            f"{quantidade_batidas}. Não foi adicionada outra batida."
-                        ),
-                    ), 409
-                if quantidade_informada < quantidade_prevista:
-                    return jsonify(
-                        sucesso=False,
-                        mensagem="A quantidade informada não pode ser menor que o limite atual.",
-                    ), 409
 
                 cursor.execute(
-                    """INSERT INTO jornadas_quantidade_batidas
-                       (usuario_id, dia_semana, quantidade_batidas)
+                    """INSERT INTO ajustes_batidas_diarias
+                       (usuario_id, data_ponto, quantidade_batidas)
                        VALUES (%s, %s, %s)
-                       ON CONFLICT (usuario_id, dia_semana)
+                       ON CONFLICT (usuario_id, data_ponto)
                        DO UPDATE SET quantidade_batidas = EXCLUDED.quantidade_batidas""",
-                    (usuario_id, agora.weekday(), quantidade_informada),
+                    (usuario_id, agora.date(), 4),
                 )
-                tipos_batida = {
-                    2: ("Entrada", "Saída"),
-                    3: ("Entrada", "Intervalo", "Saída"),
-                    4: TIPOS_BATIDA,
-                }[quantidade_informada]
+                tipos_batida = TIPOS_BATIDA
                 cursor.execute(
                     """SELECT id FROM registros_ponto
                        WHERE usuario_id = %s AND data_ponto = %s
@@ -239,15 +222,14 @@ def _registrar_ponto(exigir_localizacao):
 
             if quantidade_batidas >= quantidade_prevista and not confirmar_quantidade:
                 if (
-                    usuario[3] == "Professor"
-                    and quantidade_prevista < 4
+                    quantidade_prevista < 4
                     and quantidade_batidas < 4
                     and agora.hour < 17
                 ):
                     return jsonify(
                         sucesso=False,
                         perguntar_quantidade_batidas=True,
-                        mensagem="Quantas batidas de ponto você possui no dia de hoje?",
+                        mensagem="Hoje você possui 4 batidas?",
                     ), 409
                 return jsonify(
                     sucesso=False,

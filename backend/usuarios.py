@@ -94,15 +94,10 @@ def buscar_jornadas(usuario_id):
     with criar_conexao() as conexao:
         registros = conexao.execute(
             """
-            SELECT COALESCE(jornada.dia_semana, quantidade.dia_semana),
-                   jornada.entrada, jornada.intervalo,
-                   jornada.retorno_intervalo, jornada.saida, quantidade.quantidade_batidas
-            FROM jornadas_usuarios AS jornada
-            FULL OUTER JOIN jornadas_quantidade_batidas AS quantidade
-              ON quantidade.usuario_id = jornada.usuario_id
-             AND quantidade.dia_semana = jornada.dia_semana
-            WHERE COALESCE(jornada.usuario_id, quantidade.usuario_id) = %s
-            ORDER BY COALESCE(jornada.dia_semana, quantidade.dia_semana)
+            SELECT dia_semana, entrada, intervalo, retorno_intervalo, saida
+            FROM jornadas_usuarios
+            WHERE usuario_id = %s
+            ORDER BY dia_semana
             """,
             (usuario_id,),
         ).fetchall()
@@ -114,7 +109,7 @@ def buscar_jornadas(usuario_id):
             "intervalo": linha[2],
             "retorno_intervalo": linha[3],
             "saida": linha[4],
-            "quantidade_batidas": linha[5],
+            "quantidade_batidas": None,
         }
         for linha in registros
     ]
@@ -549,10 +544,6 @@ def excluir_jornada(usuario_id, dia):
     with criar_conexao() as conexao:
         conexao.execute(
             "DELETE FROM jornadas_usuarios WHERE usuario_id = %s AND dia_semana = %s",
-            (usuario_id, dia),
-        )
-        conexao.execute(
-            "DELETE FROM jornadas_quantidade_batidas WHERE usuario_id = %s AND dia_semana = %s",
             (usuario_id, dia),
         )
     return redirect(
