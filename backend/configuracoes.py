@@ -14,7 +14,6 @@ from .permissoes import exigir_tipos_conta, renderizar_pagina
 
 rota_configuracoes = Blueprint("configuracoes", __name__)
 FUSO_HORARIO = ZoneInfo("America/Sao_Paulo")
-TIPOS_BATIDA = ("Entrada", "Intervalo", "Retorno intervalo", "Saída")
 
 
 def obter_filtros_registros(fonte):
@@ -29,12 +28,20 @@ def obter_filtros_registros(fonte):
 def buscar_registros_ponto(filtros):
     garantir_indices_registros()
     consulta = """
-        SELECT registro.id,
-               COALESCE(registro.usuario_nome, usuario.nome_completo, 'Acesso removido'),
-               COALESCE(usuario.login, ''), COALESCE(usuario.email, ''),
-               registro.tipo_batida,
-               TO_CHAR(registro.registrado_em AT TIME ZONE 'America/Sao_Paulo',
-                       'DD/MM/YYYY HH24:MI')
+        SELECT COALESCE(registro.usuario_nome, usuario.nome_completo, 'Acesso removido'),
+               registro.data_ponto,
+               MAX(registro.id) FILTER (WHERE registro.tipo_batida = 'Entrada'),
+               MAX(registro.id) FILTER (WHERE registro.tipo_batida = 'Intervalo'),
+               MAX(registro.id) FILTER (WHERE registro.tipo_batida = 'Retorno intervalo'),
+               MAX(registro.id) FILTER (WHERE registro.tipo_batida = 'Saída'),
+               MAX(TO_CHAR(registro.registrado_em AT TIME ZONE 'America/Sao_Paulo', 'HH24:MI'))
+                   FILTER (WHERE registro.tipo_batida = 'Entrada'),
+               MAX(TO_CHAR(registro.registrado_em AT TIME ZONE 'America/Sao_Paulo', 'HH24:MI'))
+                   FILTER (WHERE registro.tipo_batida = 'Intervalo'),
+               MAX(TO_CHAR(registro.registrado_em AT TIME ZONE 'America/Sao_Paulo', 'HH24:MI'))
+                   FILTER (WHERE registro.tipo_batida = 'Retorno intervalo'),
+               MAX(TO_CHAR(registro.registrado_em AT TIME ZONE 'America/Sao_Paulo', 'HH24:MI'))
+                   FILTER (WHERE registro.tipo_batida = 'Saída')
         FROM registros_ponto AS registro
         LEFT JOIN usuarios AS usuario ON usuario.id = registro.usuario_id
         WHERE TRUE
@@ -52,7 +59,13 @@ def buscar_registros_ponto(filtros):
     if filtros["email"]:
         consulta += " AND usuario.email ILIKE %s"
         parametros.append(f"%{filtros['email']}%")
-    consulta += " ORDER BY registro.registrado_em DESC, registro.id DESC LIMIT 500"
+    consulta += """
+        GROUP BY registro.usuario_id,
+                 COALESCE(registro.usuario_nome, usuario.nome_completo, 'Acesso removido'),
+                 registro.data_ponto
+        ORDER BY registro.data_ponto DESC, 1
+        LIMIT 500
+    """
     with criar_conexao() as conexao:
         return conexao.execute(consulta, parametros).fetchall()
 
@@ -201,40 +214,87 @@ def exibir_registros_ponto():
         registros_ponto=registros,
         resultado_registros=request.args.get("resultado"),
         erro_registros=erro,
-        tipos_batida=TIPOS_BATIDA,
     )
 
 
-@rota_configuracoes.post("/configuracoes/registros-ponto/<int:registro_id>/editar")
+@rota_configuracoes.post("/configuracoes/registros-ponto/editar")
 @exigir_tipos_conta("Suporte")
-def editar_registro_ponto(registro_id):
+def editar_registro_ponto():
     filtros = obter_filtros_registros(request.form)
-    tipo = request.form.get("tipo_batida", "")
-    horario_texto = request.form.get("registrado_em", "")
-    try:
-        horario = datetime.strptime(horario_texto, "%d/%m/%Y %H:%M").replace(
-            tzinfo=FUSO_HORARIO
-        )
-    except ValueError:
+    campos_batida = {
+        "entrada": "Entrada",
+        "intervalo": "Intervalo",
+        "retorno_intervalo": "Retorno intervalo",
+        "saida": "Saída",
+    }
+    ids = {
+        tipo: request.form.get(f"id_{campo}", "").strip()
+        for campo, tipo in campos_batida.items()
+    }
+    if any(valor and not valor.isdecimal() for valor in ids.values()):
         return redirect(
-            url_for("configuracoes.exibir_registros_ponto", **filtros, resultado="horario_invalido")
+            url_for("configuracoes.exibir_registros_ponto", **filtros, resultado="nao_encontrado")
         )
-    if tipo not in TIPOS_BATIDA:
+    ids = {tipo: int(valor) if valor else None for tipo, valor in ids.items()}
+    ids_existentes = [valor for valor in ids.values() if valor]
+    if not ids_existentes:
         return redirect(
-            url_for("configuracoes.exibir_registros_ponto", **filtros, resultado="tipo_invalido")
+            url_for("configuracoes.exibir_registros_ponto", **filtros, resultado="nao_encontrado")
         )
-
+    horarios = {}
+    for campo, tipo in campos_batida.items():
+        if not ids[tipo]:
+            continue
+        horario_texto = request.form.get(campo, "").strip()
+        if not horario_texto:
+            horarios[tipo] = None
+            continue
+        if not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", horario_texto):
+            return redirect(
+                url_for("configuracoes.exibir_registros_ponto", **filtros, resultado="horario_invalido")
+            )
+        try:
+            horarios[tipo] = datetime.strptime(horario_texto, "%H:%M").time()
+        except ValueError:
+            return redirect(
+                url_for("configuracoes.exibir_registros_ponto", **filtros, resultado="horario_invalido")
+            )
     try:
         with criar_conexao() as conexao:
-            atualizacao = conexao.execute(
-                """
-                UPDATE registros_ponto
-                SET tipo_batida = %s, registrado_em = %s, data_ponto = %s
-                WHERE id = %s
-                """,
-                (tipo, horario, horario.date(), registro_id),
-            )
-            resultado = "salvo" if atualizacao.rowcount else "nao_encontrado"
+            registros = conexao.execute(
+                """SELECT id, usuario_id, data_ponto, tipo_batida
+                   FROM registros_ponto WHERE id = ANY(%s) FOR UPDATE""",
+                (ids_existentes,),
+            ).fetchall()
+            por_id = {registro[0]: registro for registro in registros}
+            if len(por_id) != len(ids_existentes) or any(
+                registro[3] != tipo
+                for tipo, registro_id in ids.items()
+                if registro_id and (registro := por_id.get(registro_id)) is not None
+            ):
+                resultado = "nao_encontrado"
+            elif any(registro_id not in por_id for registro_id in ids_existentes):
+                resultado = "nao_encontrado"
+            elif len({(registro[1], registro[2]) for registro in registros}) != 1:
+                resultado = "nao_encontrado"
+            else:
+                data_ponto = registros[0][2]
+                for tipo, registro_id in ids.items():
+                    if not registro_id:
+                        continue
+                    horario = horarios[tipo]
+                    if horario is None:
+                        conexao.execute(
+                            "DELETE FROM registros_ponto WHERE id = %s",
+                            (registro_id,),
+                        )
+                        continue
+                    registrado_em = datetime.combine(data_ponto, horario, FUSO_HORARIO)
+                    conexao.execute(
+                        "UPDATE registros_ponto SET registrado_em = %s WHERE id = %s",
+                        (registrado_em, registro_id),
+                    )
+                resultado = "salvo"
     except UniqueViolation:
         resultado = "duplicado"
     return redirect(
@@ -242,15 +302,53 @@ def editar_registro_ponto(registro_id):
     )
 
 
-@rota_configuracoes.post("/configuracoes/registros-ponto/<int:registro_id>/excluir")
+@rota_configuracoes.post("/configuracoes/registros-ponto/excluir")
 @exigir_tipos_conta("Suporte")
-def excluir_registro_ponto(registro_id):
+def excluir_registro_ponto():
     filtros = obter_filtros_registros(request.form)
-    with criar_conexao() as conexao:
-        exclusao = conexao.execute(
-            "DELETE FROM registros_ponto WHERE id = %s", (registro_id,)
+    ids_texto = [
+        request.form.get(f"id_{campo}", "").strip()
+        for campo in ("entrada", "intervalo", "retorno_intervalo", "saida")
+    ]
+    if any(registro_id and not registro_id.isdecimal() for registro_id in ids_texto):
+        return redirect(
+            url_for("configuracoes.exibir_registros_ponto", **filtros, resultado="nao_encontrado")
         )
-    resultado = "excluido" if exclusao.rowcount else "nao_encontrado"
+    ids = [int(registro_id) for registro_id in ids_texto if registro_id]
+    if not ids:
+        return redirect(
+            url_for("configuracoes.exibir_registros_ponto", **filtros, resultado="nao_encontrado")
+        )
+    with criar_conexao() as conexao:
+        registros = conexao.execute(
+            """SELECT id, usuario_id, data_ponto, tipo_batida
+               FROM registros_ponto WHERE id = ANY(%s) FOR UPDATE""",
+            (ids,),
+        ).fetchall()
+        por_id = {registro[0]: registro for registro in registros}
+        esperado = {
+            int(registro_id): tipo
+            for campo, tipo in (
+                ("entrada", "Entrada"),
+                ("intervalo", "Intervalo"),
+                ("retorno_intervalo", "Retorno intervalo"),
+                ("saida", "Saída"),
+            )
+            if (registro_id := request.form.get(f"id_{campo}", "").strip())
+            and registro_id.isdecimal()
+        }
+        if (
+            len(por_id) != len(ids)
+            or len({(registro[1], registro[2]) for registro in registros}) != 1
+            or any(por_id.get(registro_id, (None, None, None, None))[3] != tipo
+                   for registro_id, tipo in esperado.items())
+        ):
+            resultado = "nao_encontrado"
+        else:
+            exclusao = conexao.execute(
+                "DELETE FROM registros_ponto WHERE id = ANY(%s)", (ids,)
+            )
+            resultado = "excluido" if exclusao.rowcount == len(ids) else "nao_encontrado"
     return redirect(
         url_for("configuracoes.exibir_registros_ponto", **filtros, resultado=resultado)
     )

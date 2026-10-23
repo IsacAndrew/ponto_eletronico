@@ -1,6 +1,6 @@
 .janela-registros-ponto {
-    width: min(100% - 28px, 1120px);
-    max-width: 1120px;
+    width: min(100% - 28px, 1180px);
+    max-width: 1180px;
     max-height: min(92dvh, 900px);
     padding: 0;
     overflow: auto;
@@ -19,17 +19,22 @@
 .fechar-registros-ponto { display: grid; width: 40px; height: 40px; flex: 0 0 auto; border: 1px solid #d6dfe8; border-radius: 10px; background: #fff; color: #52647a; font-size: 1.55rem; line-height: 1; text-decoration: none; place-items: center; }
 .filtros-registros-ponto { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: end; gap: 12px; padding: 15px; border: 1px solid #dbe3ec; border-radius: 12px; background: #fff; }
 .filtros-registros-ponto label { display: grid; min-width: 0; gap: 6px; color: #35465d; font-size: .82rem; font-weight: 650; }
-.filtros-registros-ponto input, .tabela-registros-ponto input, .tabela-registros-ponto select { width: 100%; min-width: 0; min-height: 39px; padding: 7px 9px; border: 1px solid #cbd5e1; border-radius: 7px; background: #fff; color: #243449; font: inherit; font-size: .84rem; }
+.filtros-registros-ponto input, .tabela-registros-ponto input { width: 100%; min-width: 0; min-height: 39px; padding: 7px 9px; border: 1px solid #cbd5e1; border-radius: 7px; background: #fff; color: #243449; font: inherit; font-size: .84rem; }
 .acoes-filtro-registros { display: flex; align-items: center; justify-content: flex-end; gap: 12px; grid-column: 1 / -1; }
 .acoes-filtro-registros a { color: #52647a; font-size: .86rem; }
 .acoes-filtro-registros button, .botao-salvar-registro, .botao-excluir-registro { min-height: 38px; padding: 8px 12px; border: 0; border-radius: 8px; background: #31445c; color: #fff; font: inherit; font-size: .83rem; font-weight: 650; cursor: pointer; }
-.total-registros-ponto { margin: 17px 0 9px; color: #64758a; font-size: .83rem; }
+.total-registros-ponto { margin: 17px 0 4px; color: #64758a; font-size: .83rem; }
+.instrucao-registros-ponto { margin: 0 0 9px; color: #718096; font-size: .78rem; }
 .tabela-registros-ponto { overflow-x: auto; border: 1px solid #dbe3ec; border-radius: 11px; background: #fff; }
-.tabela-registros-ponto table { width: 100%; border-collapse: collapse; text-align: left; }
-.tabela-registros-ponto th, .tabela-registros-ponto td { padding: 10px; border-bottom: 1px solid #e8edf2; vertical-align: middle; }
+.tabela-registros-ponto table { width: 100%; min-width: 850px; border-collapse: collapse; text-align: left; }
+.tabela-registros-ponto th, .tabela-registros-ponto td { padding: 9px 10px; border-bottom: 1px solid #e8edf2; vertical-align: middle; }
 .tabela-registros-ponto th { background: #f3f6f9; color: #52647a; font-size: .75rem; white-space: nowrap; }
 .tabela-registros-ponto td { color: #34465d; font-size: .82rem; }
 .tabela-registros-ponto td strong { color: #26364b; }
+.tabela-registros-ponto td:first-child { min-width: 190px; }
+.campo-horario-registro { max-width: 90px; text-align: center; font-variant-numeric: tabular-nums; }
+.campo-horario-registro:focus { border-color: #708da8; outline: 3px solid rgb(112 141 168 / 17%); }
+.batida-ausente { color: #8895a5; }
 .acoes-registro { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
 .acoes-registro form { margin: 0; }
 .botao-salvar-registro { background: #31445c; }
@@ -43,14 +48,16 @@
     .janela-registros-ponto { width: calc(100% - 16px); max-height: calc(100dvh - 16px); border-radius: 13px; }
     .filtros-registros-ponto { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 12px; }
     .tabela-registros-ponto { overflow: visible; border: 0; background: transparent; }
-    .tabela-registros-ponto table, .tabela-registros-ponto tbody { display: block; }
+    .tabela-registros-ponto table, .tabela-registros-ponto tbody { display: block; min-width: 0; }
     .tabela-registros-ponto thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
-    .tabela-registros-ponto tr { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin-bottom: 10px; padding: 12px; border: 1px solid #dbe3ec; border-radius: 11px; background: #fff; }
+    .tabela-registros-ponto tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; padding: 12px; border: 1px solid #dbe3ec; border-radius: 11px; background: #fff; }
     .tabela-registros-ponto td { display: grid; min-width: 0; gap: 5px; padding: 0; border: 0; }
     .tabela-registros-ponto td::before { content: attr(data-label); color: #718096; font-size: .7rem; font-weight: 700; }
     .tabela-registros-ponto td:first-child, .tabela-registros-ponto .acoes-registro { grid-column: 1 / -1; }
-    .tabela-registros-ponto .acoes-registro { justify-content: flex-end; padding-top: 6px; border-top: 1px solid #edf1f5; }
+    .tabela-registros-ponto td:first-child { min-width: 0; }
+    .tabela-registros-ponto .acoes-registro { display: flex; justify-content: flex-end; padding-top: 7px; border-top: 1px solid #edf1f5; }
     .tabela-registros-ponto .sem-registros-ponto { display: block; grid-column: 1 / -1; }
+    .conteudo-registros-ponto { padding: 16px 12px; }
 }
 
 @media (max-width: 420px) {

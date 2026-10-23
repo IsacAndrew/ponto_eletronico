@@ -18,16 +18,15 @@
                 <a class="fechar-registros-ponto" href="{{ url_for('configuracoes.exibir_configuracoes') }}" aria-label="Voltar às configurações">×</a>
             </header>
 
-            {% if resultado_registros == 'salvo' %}<p class="aviso-registros sucesso" role="status">Batida atualizada.</p>{% endif %}
-            {% if resultado_registros == 'excluido' %}<p class="aviso-registros sucesso" role="status">Batida excluída.</p>{% endif %}
-            {% if resultado_registros == 'duplicado' %}<p class="aviso-registros erro" role="alert">Já existe uma batida desse tipo para essa pessoa nessa data.</p>{% endif %}
-            {% if resultado_registros == 'horario_invalido' %}<p class="aviso-registros erro" role="alert">Informe data e horário válidos.</p>{% endif %}
-            {% if resultado_registros == 'tipo_invalido' %}<p class="aviso-registros erro" role="alert">Selecione um tipo de batida válido.</p>{% endif %}
-            {% if resultado_registros == 'nao_encontrado' %}<p class="aviso-registros erro" role="alert">O registro não foi encontrado.</p>{% endif %}
+            {% if resultado_registros == 'salvo' %}<p class="aviso-registros sucesso" role="status">Batidas atualizadas.</p>{% endif %}
+            {% if resultado_registros == 'excluido' %}<p class="aviso-registros sucesso" role="status">Registros do dia excluídos.</p>{% endif %}
+            {% if resultado_registros == 'duplicado' %}<p class="aviso-registros erro" role="alert">Não foi possível salvar porque há uma batida duplicada.</p>{% endif %}
+            {% if resultado_registros == 'horario_invalido' %}<p class="aviso-registros erro" role="alert">Digite o horário no formato HH:MM.</p>{% endif %}
+            {% if resultado_registros == 'nao_encontrado' %}<p class="aviso-registros erro" role="alert">Os registros não foram encontrados ou não pertencem à mesma pessoa e data.</p>{% endif %}
             {% if erro_registros %}<p class="aviso-registros erro" role="alert">{{ erro_registros }}</p>{% endif %}
 
             <form class="filtros-registros-ponto" method="get" action="{{ url_for('configuracoes.exibir_registros_ponto') }}">
-                <label>Nome<input name="nome" value="{{ filtros_registros.nome }}" placeholder="Nome do professor"></label>
+                <label>Nome<input name="nome" value="{{ filtros_registros.nome }}" placeholder="Nome do usuário"></label>
                 <label>Data<input name="data" type="text" inputmode="numeric" placeholder="DD/MM/AAAA" pattern="[0-9]{2}/[0-9]{2}/[0-9]{4}" value="{{ data_filtro_exibicao }}" aria-label="Filtrar por data no formato dia, mês e ano"></label>
                 <label>Login<input name="login" value="{{ filtros_registros.login }}" placeholder="Login do usuário"></label>
                 <label>Email<input name="email" type="email" value="{{ filtros_registros.email }}" placeholder="Email do usuário"></label>
@@ -37,37 +36,54 @@
                 </div>
             </form>
 
-            <p class="total-registros-ponto">{{ registros_ponto|length }} registro(s){% if registros_ponto|length == 500 %} — exibindo até 500 resultados{% endif %}</p>
+            <p class="total-registros-ponto">{{ registros_ponto|length }} linha(s){% if registros_ponto|length == 500 %} — exibindo até 500 resultados{% endif %}</p>
+            <p class="instrucao-registros-ponto">Para alterar, selecione o horário e digite quatro números (ex.: 0730). Apague o campo e salve para excluir aquela batida.</p>
             <div class="tabela-registros-ponto">
                 <table>
-                    <thead><tr><th>Professor</th><th>Login</th><th>Email</th><th>Tipo</th><th>Data e horário</th><th>Ações</th></tr></thead>
+                    <thead>
+                        <tr><th>Nome</th><th>1° Batida</th><th>2° Batida</th><th>3° Batida</th><th>4° Batida</th><th>Data</th><th>Ações</th></tr>
+                    </thead>
                     <tbody>
                         {% for registro in registros_ponto %}
+                            {% set formulario_id = 'editar-registro-' ~ loop.index %}
                             <tr>
-                                <td data-label="Professor">
-                                    <form id="editar-registro-{{ registro[0] }}" method="post" action="{{ url_for('configuracoes.editar_registro_ponto', registro_id=registro[0]) }}">
+                                <td data-label="Nome">
+                                    <form id="{{ formulario_id }}" method="post" action="{{ url_for('configuracoes.editar_registro_ponto') }}">
                                         {% for campo, valor in filtros_registros.items() %}<input type="hidden" name="{{ campo }}" value="{{ valor }}">{% endfor %}
+                                        {% for campo, indice in [('entrada', 2), ('intervalo', 3), ('retorno_intervalo', 4), ('saida', 5)] %}
+                                            {% if registro[indice] %}<input type="hidden" name="id_{{ campo }}" value="{{ registro[indice] }}">{% endif %}
+                                        {% endfor %}
                                     </form>
-                                    <strong>{{ registro[1] }}</strong>
+                                    <strong>{{ registro[0] }}</strong>
                                 </td>
-                                <td data-label="Login">{{ registro[2] or '—' }}</td>
-                                <td data-label="Email">{{ registro[3] or '—' }}</td>
-                                <td data-label="Tipo">
-                                    <select form="editar-registro-{{ registro[0] }}" name="tipo_batida" aria-label="Tipo da batida de {{ registro[1] }}">
-                                        {% for tipo in tipos_batida %}<option value="{{ tipo }}" {% if registro[4] == tipo %}selected{% endif %}>{{ tipo }}</option>{% endfor %}
-                                    </select>
-                                </td>
-                                <td data-label="Data e horário"><input form="editar-registro-{{ registro[0] }}" name="registrado_em" type="text" inputmode="numeric" placeholder="DD/MM/AAAA HH:MM" pattern="[0-9]{2}/[0-9]{2}/[0-9]{4} [0-9]{2}:[0-9]{2}" value="{{ registro[5] }}" required aria-label="Data e horário da batida de {{ registro[1] }} no formato dia, mês, ano e hora"></td>
+                                {% for campo, indice_id, indice_horario, rotulo in [
+                                    ('entrada', 2, 6, '1° Batida'),
+                                    ('intervalo', 3, 7, '2° Batida'),
+                                    ('retorno_intervalo', 4, 8, '3° Batida'),
+                                    ('saida', 5, 9, '4° Batida')
+                                ] %}
+                                    <td data-label="{{ rotulo }}">
+                                        {% if registro[indice_id] %}
+                                            <input form="{{ formulario_id }}" class="campo-horario-registro" name="{{ campo }}" type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" value="{{ registro[indice_horario] }}" aria-label="{{ rotulo }} de {{ registro[0] }}">
+                                        {% else %}
+                                            <span class="batida-ausente">---</span>
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                                <td data-label="Data">{{ registro[1].strftime('%d/%m/%Y') }}</td>
                                 <td class="acoes-registro" data-label="Ações">
-                                    <button class="botao-salvar-registro" type="submit" form="editar-registro-{{ registro[0] }}">Salvar</button>
-                                    <form method="post" action="{{ url_for('configuracoes.excluir_registro_ponto', registro_id=registro[0]) }}" onsubmit="return window.confirm('Excluir esta batida de ponto?');">
+                                    <button class="botao-salvar-registro" type="submit" form="{{ formulario_id }}">Salvar</button>
+                                    <form method="post" action="{{ url_for('configuracoes.excluir_registro_ponto') }}" onsubmit="return window.confirm('Excluir todas as batidas deste usuário nesta data?');">
                                         {% for campo, valor in filtros_registros.items() %}<input type="hidden" name="{{ campo }}" value="{{ valor }}">{% endfor %}
-                                        <button class="botao-excluir-registro" type="submit">Excluir</button>
+                                        {% for campo, indice in [('entrada', 2), ('intervalo', 3), ('retorno_intervalo', 4), ('saida', 5)] %}
+                                            {% if registro[indice] %}<input type="hidden" name="id_{{ campo }}" value="{{ registro[indice] }}">{% endif %}
+                                        {% endfor %}
+                                        <button class="botao-excluir-registro" type="submit">Excluir dia</button>
                                     </form>
                                 </td>
                             </tr>
                         {% else %}
-                            <tr><td class="sem-registros-ponto" colspan="6">Nenhum registro encontrado para os filtros informados.</td></tr>
+                            <tr><td class="sem-registros-ponto" colspan="7">Nenhum registro encontrado para os filtros informados.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
