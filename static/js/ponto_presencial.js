@@ -50,18 +50,14 @@
                 resultado = await resposta.json();
             }
             if (!resposta.ok) {
-                const erro = new Error(resultado.mensagem || "Não foi possível registrar seu ponto.");
-                erro.codigoErro = resultado.codigo_erro;
-                throw erro;
+                throw new Error(resultado.mensagem || "Não foi possível registrar seu ponto.");
             }
             mensagem.textContent = resultado.confirmacao_quantidade
                 ? "Ok, muito obrigado. Ponto registrado com sucesso pode fechar essa aba"
                 : resultado.mensagem;
             mensagem.dataset.estado = "sucesso";
         } catch (erro) {
-            mostrarErro(erro.codigoErro
-                ? `Erro ${erro.codigoErro} - Informe o Isac sobre este código.`
-                : erro.message);
+            mostrarErro(erro.message);
         } finally {
             tentativaEmAndamento = false;
         }

@@ -194,7 +194,7 @@
                     <input id="telefone-usuario" name="telefone" type="tel" value="{{ usuario_edicao.telefone or '' }}" placeholder="(xx) xxxxx-xxxx" autocomplete="tel" data-formatar-telefone>
 
                     <label for="rg-usuario">RG</label>
-                    <input id="rg-usuario" name="rg" type="text" value="{{ usuario_edicao.rg or '' }}" maxlength="30" autocomplete="off">
+                    <input id="rg-usuario" name="rg" type="text" value="{{ usuario_edicao.rg or '' }}" maxlength="12" inputmode="numeric" autocomplete="off" data-formatar-rg>
 
                     <label for="permissao-usuario">Permissão</label>
                     <select id="permissao-usuario" name="tipo_conta" required>
@@ -263,7 +263,7 @@
                     <input id="novo-telefone" name="telefone" type="tel" value="{{ usuario_novo.telefone or '' }}" placeholder="(xx) xxxxx-xxxx" autocomplete="tel" data-formatar-telefone>
 
                     <label for="novo-rg">RG</label>
-                    <input id="novo-rg" name="rg" type="text" value="{{ usuario_novo.rg or '' }}" maxlength="30" autocomplete="off">
+                    <input id="novo-rg" name="rg" type="text" value="{{ usuario_novo.rg or '' }}" maxlength="12" inputmode="numeric" autocomplete="off" data-formatar-rg>
 
                     <label for="nova-permissao">Permissão</label>
                     <select id="nova-permissao" name="tipo_conta">
@@ -282,5 +282,6 @@
         </dialog>
     {% endif %}
     <script src="{{ url_for('static', filename='js/usuarios.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/formatar_rg.js') }}" defer></script>
     {% if usuario_edicao and aba_edicao == 'jornada' %}<script src="{{ url_for('static', filename='js/jornada_usuario.js') }}" defer></script>{% endif %}
 {% endblock %}

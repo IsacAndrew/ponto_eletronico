@@ -6,6 +6,7 @@ from flask import Blueprint, g, jsonify, redirect, request, session, url_for
 from psycopg.errors import UniqueViolation
 
 from .banco_dados import criar_conexao
+from .formatacao import formatar_rg
 from .estrutura_registros import garantir_indices_registros
 from .estrutura_usuarios import garantir_estrutura_usuarios
 from .localizacao import garantir_tabela_marco_zero, obter_marco_zero
@@ -94,7 +95,10 @@ def salvar_perfil():
     login = request.form.get("login", "").strip()
     email = request.form.get("email", "").strip()
     telefone = request.form.get("telefone", "").strip()
-    rg = request.form.get("rg", "").strip() or None
+    try:
+        rg = formatar_rg(request.form.get("rg", ""))
+    except ValueError:
+        return redirect(url_for("configuracoes.exibir_configuracoes", perfil="rg_invalido"))
     usuario_id = session["usuario_id"]
     if len(nome.split()) < 2 or len(nome) > 200:
         return redirect(url_for("configuracoes.exibir_configuracoes", perfil="nome_invalido"))
@@ -104,8 +108,6 @@ def salvar_perfil():
         return redirect(url_for("configuracoes.exibir_configuracoes", perfil="email_invalido"))
     if not re.fullmatch(r"\(\d{2}\) \d{5}-\d{4}", telefone):
         return redirect(url_for("configuracoes.exibir_configuracoes", perfil="telefone_invalido"))
-    if len(rg or "") > 30:
-        return redirect(url_for("configuracoes.exibir_configuracoes", perfil="rg_invalido"))
 
     with criar_conexao() as conexao:
         conflito = conexao.execute(

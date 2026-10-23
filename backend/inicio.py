@@ -74,11 +74,10 @@ def _registrar_ponto(exigir_localizacao):
             longitude = float(dados_localizacao.get("longitude"))
             precisao = float(dados_localizacao.get("precisao"))
         except (TypeError, ValueError):
-            current_app.logger.warning("PONTO_E01: localização ausente ou inválida")
+            current_app.logger.warning("PONTO_LOCALIZACAO_AUSENTE_OU_INVALIDA")
             return jsonify(
                 sucesso=False,
-                codigo_erro="E01",
-                mensagem="Localização inválida. Informe o código E01 ao suporte.",
+                mensagem="Não foi possível obter sua localização. Ative a localização do aparelho e tente novamente.",
             ), 400
 
         if (
@@ -87,11 +86,10 @@ def _registrar_ponto(exigir_localizacao):
             or not -180 <= longitude <= 180
             or precisao <= 0
         ):
-            current_app.logger.warning("PONTO_E01: coordenadas ou precisão fora do formato esperado")
+            current_app.logger.warning("PONTO_COORDENADAS_OU_PRECISAO_INVALIDAS")
             return jsonify(
                 sucesso=False,
-                codigo_erro="E01",
-                mensagem="Não foi possível validar a localização. Informe o código E01 ao suporte.",
+                mensagem="Não foi possível validar a localização. Confira as permissões e tente novamente.",
             ), 400
     else:
         latitude = longitude = precisao = None
@@ -121,11 +119,10 @@ def _registrar_ponto(exigir_localizacao):
                 marco_zero = obter_marco_zero(conexao)
                 latitude_marco, longitude_marco, _, raio_metros = marco_zero
                 if latitude_marco is None or longitude_marco is None:
-                    current_app.logger.error("PONTO_E02: marco zero sem coordenadas")
+                    current_app.logger.error("MARCO_ZERO_SEM_COORDENADAS")
                     return jsonify(
                         sucesso=False,
-                        codigo_erro="E02",
-                        mensagem="Não foi possível validar o marco zero. Informe o código E02 ao suporte.",
+                        mensagem="A localização da escola não está configurada corretamente. Avise o suporte.",
                     ), 503
 
                 distancia = calcular_distancia_metros(
@@ -133,29 +130,26 @@ def _registrar_ponto(exigir_localizacao):
                 )
                 if distancia - precisao > raio_metros:
                     current_app.logger.warning(
-                        "PONTO_E03: posição fora do raio mesmo considerando a precisão "
+                        "PONTO_FORA_DO_RAIO: posição fora do raio mesmo considerando a precisão "
                         "(distância=%sm, precisão=%sm, raio=%sm)",
                         round(distancia), round(precisao), raio_metros,
                     )
                     return jsonify(
                         sucesso=False,
-                        codigo_erro="E03",
                         mensagem=(
-                            "Ponto não registrado: localização fora do raio permitido. "
-                            "Informe o código E03 ao suporte."
+                            "Ponto não registrado: você está fora do raio permitido da escola."
                         ),
                     ), 403
                 if distancia + precisao > raio_metros:
                     current_app.logger.warning(
-                        "PONTO_E04: precisão insuficiente (distância=%sm, precisão=%sm, raio=%sm)",
+                        "PONTO_PRECISAO_INSUFICIENTE (distância=%sm, precisão=%sm, raio=%sm)",
                         round(distancia), round(precisao), raio_metros,
                     )
                     return jsonify(
                         sucesso=False,
-                        codigo_erro="E04",
                         mensagem=(
                             "Não foi possível confirmar sua localização. "
-                            "Ative a localização precisa e informe o código E04 ao suporte."
+                            "Ative a localização precisa do aparelho e tente novamente."
                         ),
                     ), 409
 

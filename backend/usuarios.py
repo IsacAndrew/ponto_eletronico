@@ -7,6 +7,7 @@ from psycopg.errors import UniqueViolation
 from werkzeug.security import generate_password_hash
 
 from .banco_dados import criar_conexao
+from .formatacao import formatar_rg
 from .jornada import garantir_estrutura_jornada
 from .estrutura_usuarios import garantir_estrutura_usuarios
 from .ponto_qr import revogar_dispositivos_usuario
@@ -202,8 +203,10 @@ def validar_dados_usuario(formulario):
         return dados, "Use o formato de telefone (xx) xxxxx-xxxx."
     if dados["funcao"] and len(dados["funcao"]) > 100:
         return dados, "A função deve ter no máximo 100 caracteres."
-    if dados["rg"] and len(dados["rg"]) > 30:
-        return dados, "O RG deve ter no máximo 30 caracteres."
+    try:
+        dados["rg"] = formatar_rg(dados["rg"])
+    except ValueError:
+        return dados, "Informe o RG com 9 dígitos."
     if dados["tipo_conta"] not in TIPOS_CONTA:
         return dados, "Selecione uma permissão válida."
     return dados, None

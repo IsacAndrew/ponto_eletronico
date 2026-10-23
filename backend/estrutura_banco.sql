@@ -19,6 +19,25 @@ ADD COLUMN IF NOT EXISTS funcao TEXT;
 ALTER TABLE usuarios
 ADD COLUMN IF NOT EXISTS rg TEXT;
 
+UPDATE usuarios
+SET rg = substring(digitos from 1 for 2) || '.' ||
+         substring(digitos from 3 for 3) || '.' ||
+         substring(digitos from 6 for 3) || '-' ||
+         substring(digitos from 9 for 1)
+FROM (
+    SELECT id, regexp_replace(rg, '[^0-9]', '', 'g') AS digitos
+    FROM usuarios
+    WHERE rg IS NOT NULL
+) AS cadastro
+WHERE usuarios.id = cadastro.id
+  AND length(cadastro.digitos) = 9
+  AND usuarios.rg <> (
+      substring(cadastro.digitos from 1 for 2) || '.' ||
+      substring(cadastro.digitos from 3 for 3) || '.' ||
+      substring(cadastro.digitos from 6 for 3) || '-' ||
+      substring(cadastro.digitos from 9 for 1)
+  );
+
 CREATE UNIQUE INDEX IF NOT EXISTS usuarios_login_normalizado_uidx
 ON usuarios (LOWER(BTRIM(login)));
 
