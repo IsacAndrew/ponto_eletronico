@@ -254,7 +254,6 @@ def criar_planilha_controle_acesso():
             """
             SELECT nome_completo, ultimo_acesso
             FROM usuarios
-            WHERE tipo_conta = 'Professor'
             ORDER BY nome_completo
             """
         ).fetchall()
@@ -262,7 +261,7 @@ def criar_planilha_controle_acesso():
     workbook = Workbook()
     planilha = workbook.active
     planilha.title = "Controle de acesso"
-    planilha.append(("Nome do professor", "Último acesso", "Já acessou o sistema?"))
+    planilha.append(("Nome do usuário", "Último acesso", "Já acessou o sistema?"))
 
     cor_cabecalho = "31425E"
     preenchimento_cabecalho = PatternFill("solid", fgColor=cor_cabecalho)
