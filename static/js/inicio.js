@@ -40,6 +40,9 @@ async function registrarPonto() {
             throw new Error(resultado.mensagem || "Não foi possível registrar o ponto.");
         }
 
+        if (resultado.aviso_registro_incompleto) {
+            window.alert(resultado.aviso_registro_incompleto);
+        }
         ultimoRegistro.textContent = `Último registro: ${resultado.horario} / ${resultado.tipo_batida}`;
         if (resultado.confirmacao_quantidade) {
             window.alert("Ponto registrado com sucesso.");

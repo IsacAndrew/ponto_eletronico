@@ -9,7 +9,7 @@
     <header class="cabecalho-planilha">
         <span class="sobrelinha-planilha">Relatórios</span>
         <h1>Planilha</h1>
-        <p>Escolha as pessoas e o período para gerar o documento.</p>
+        <p>Escolha as pessoas e o mês para gerar o documento.</p>
     </header>
     {% if erro_planilha %}<p class="erro-planilha" role="alert">{{ erro_planilha }}</p>{% endif %}
     <form class="filtros-planilha" method="post" action="{{ url_for('planilha.exibir_planilha') }}">
@@ -35,40 +35,21 @@
             </div>
         </details>
         <details class="seletor-planilha">
-            <summary><span><strong>Período</strong><small>Selecione dia, semana, mês ou ano</small></span><span class="seta-seletor" aria-hidden="true">⌄</span></summary>
+            <summary><span><strong>Mês do relatório</strong><small data-resumo-mes>{{ meses_abreviados[campos.mes|int - 1] }} / {{ campos.ano }}</small></span><span class="seta-seletor" aria-hidden="true">⌄</span></summary>
             <div class="conteudo-seletor">
-                <div class="campo-planilha">
-                    <label for="periodo">Selecione a data</label>
-                    <select id="periodo" name="periodo">
-                        <option value="dia" {% if campos.periodo == 'dia' %}selected{% endif %}>Dia</option>
-                        <option value="semana" {% if campos.periodo == 'semana' %}selected{% endif %}>Semana</option>
-                        <option value="mes" {% if campos.periodo == 'mes' %}selected{% endif %}>Mês</option>
-                        <option value="ano" {% if campos.periodo == 'ano' %}selected{% endif %}>Ano</option>
+                <div class="campo-planilha campo-mes-ano">
+                    <label for="mes">Mês</label>
+                    <select id="mes" name="mes" required>
+                        {% for mes in meses_abreviados %}
+                            <option value="{{ loop.index }}" {% if campos.mes|int == loop.index %}selected{% endif %}>{{ mes }}</option>
+                        {% endfor %}
                     </select>
                 </div>
-                <div class="campo-intervalo-datas" data-period-field="dia">
-                    <div class="campo-planilha">
-                        <label for="data-inicio">Data inicial</label>
-                        <input id="data-inicio" name="data_inicio" type="date" value="{{ campos.data_inicio }}">
-                    </div>
-                    <div class="campo-planilha">
-                        <label for="data-fim">Data final</label>
-                        <input id="data-fim" name="data_fim" type="date" value="{{ campos.data_fim }}">
-                    </div>
-                </div>
-                <div class="campo-planilha campo-data-referencia" data-period-field="semana" hidden>
-                    <label for="data-referencia">Dia da semana</label>
-                    <input id="data-referencia" name="data_referencia" type="date" value="{{ campos.data_referencia }}">
-                </div>
-                <div class="campo-planilha campo-mes" data-period-field="mes" hidden>
-                    <label for="mes">Mês</label>
-                    <input id="mes" name="mes" type="month" value="{{ campos.mes }}">
-                </div>
-                <div class="campo-planilha campo-ano" data-period-field="ano" hidden>
+                <div class="campo-planilha campo-mes-ano">
                     <label for="ano">Ano</label>
-                    <input id="ano" name="ano" type="number" min="2000" max="2100" inputmode="numeric" placeholder="AAAA" value="{{ campos.ano }}">
+                    <input id="ano" name="ano" type="number" min="2000" max="2100" inputmode="numeric" value="{{ campos.ano }}" required>
                 </div>
-                <p class="previa-periodo" data-period-preview aria-live="polite"></p>
+                <p class="previa-periodo" data-resumo-mes-ano aria-live="polite"></p>
             </div>
         </details>
         <div class="rodape-filtros-planilha">

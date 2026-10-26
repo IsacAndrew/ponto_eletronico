@@ -1,47 +1,20 @@
 (() => {
-    const seletorPeriodo = document.querySelector("#periodo");
-    if (!seletorPeriodo) return;
-
-    const referenciaSemana = document.querySelector("#data-referencia");
-    const dataInicio = document.querySelector("#data-inicio");
-    const dataFim = document.querySelector("#data-fim");
     const mes = document.querySelector("#mes");
     const ano = document.querySelector("#ano");
-    const previa = document.querySelector("[data-period-preview]");
-    const formatar = (data) => new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(data);
+    if (!mes || !ano) return;
+    const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    const resumoMes = document.querySelector("[data-resumo-mes-ano]");
+    const resumoMesCabecalho = document.querySelector("[data-resumo-mes]");
 
-    function atualizarPeriodo() {
-        const tipo = seletorPeriodo.value;
-        document.querySelectorAll("[data-period-field]").forEach((campo) => {
-            const visivel = campo.dataset.periodField === tipo;
-            campo.hidden = !visivel;
-            campo.querySelectorAll("input").forEach((input) => input.required = visivel);
-        });
-        let texto = "";
-        if (tipo === "dia" && dataInicio.value && dataFim.value) {
-            texto = `Período de ${formatar(new Date(`${dataInicio.value}T12:00:00`))} a ${formatar(new Date(`${dataFim.value}T12:00:00`))}`;
-        } else if (tipo === "semana" && referenciaSemana.value) {
-            const data = new Date(`${referenciaSemana.value}T12:00:00`);
-            const inicio = new Date(data);
-            inicio.setDate(data.getDate() - data.getDay());
-            const fim = new Date(inicio);
-            fim.setDate(inicio.getDate() + 6);
-            texto = `Semana de ${formatar(inicio)} a ${formatar(fim)}`;
-        } else if (tipo === "mes" && mes.value) {
-            const [y, m] = mes.value.split("-").map(Number);
-            const ultimoDia = new Date(y, m, 0).getDate();
-            texto = `Período de 01/${String(m).padStart(2,"0")}/${y} a ${ultimoDia}/${String(m).padStart(2,"0")}/${y}`;
-        } else if (tipo === "ano" && ano.value) {
-            texto = `Período de 01/01/${ano.value} a 31/12/${ano.value}`;
-        }
-        previa.textContent = texto;
+    function atualizarMes() {
+        const texto = `${meses[Number(mes.value) - 1]} / ${ano.value}`;
+        resumoMes.textContent = texto;
+        resumoMesCabecalho.textContent = texto;
     }
 
-    [seletorPeriodo, referenciaSemana, dataInicio, dataFim, mes, ano].forEach((campo) => {
-        campo.addEventListener("input", atualizarPeriodo);
-        campo.addEventListener("change", atualizarPeriodo);
-    });
-    atualizarPeriodo();
+    [mes, ano].forEach((campo) => campo.addEventListener("input", atualizarMes));
+    [mes, ano].forEach((campo) => campo.addEventListener("change", atualizarMes));
+    atualizarMes();
 
     const campoBusca = document.querySelector("#busca-colaborador");
     const listaUsuarios = document.querySelector(".lista-colaboradores");

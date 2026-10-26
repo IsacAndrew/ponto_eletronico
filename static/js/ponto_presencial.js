@@ -56,6 +56,9 @@
             if (!resposta.ok) {
                 throw new Error(resultado.mensagem || "Não foi possível registrar seu ponto.");
             }
+            if (resultado.aviso_registro_incompleto) {
+                window.alert(resultado.aviso_registro_incompleto);
+            }
             mensagem.textContent = resultado.confirmacao_quantidade
                 ? "Ponto registrado com sucesso."
                 : resultado.mensagem;

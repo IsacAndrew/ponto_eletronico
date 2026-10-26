@@ -18,7 +18,10 @@ from .permissoes import exigir_tipos_conta, renderizar_pagina
 
 rota_planilha = Blueprint("planilha", __name__)
 FUSO_HORARIO = ZoneInfo("America/Sao_Paulo")
-TIPOS_PERIODO = {"dia", "semana", "mes", "ano"}
+MESES_ABREVIADOS = (
+    "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+    "Jul", "Ago", "Set", "Out", "Nov", "Dez",
+)
 
 
 def buscar_usuarios_exportacao():
@@ -33,55 +36,16 @@ def buscar_usuarios_exportacao():
         ).fetchall()
 
 
-def converter_data(valor):
-    if not valor:
-        return None
-    for formato in ("%d/%m/%y", "%d/%m/%Y", "%Y-%m-%d"):
-        try:
-            return datetime.strptime(valor, formato).date()
-        except (TypeError, ValueError):
-            pass
-    return None
-
-
 def obter_periodo(formulario):
-    tipo = formulario.get("periodo", "dia")
-    if tipo not in TIPOS_PERIODO:
-        return None, None, "Selecione um tipo de período válido."
-
-    if tipo == "dia":
-        inicio = converter_data(formulario.get("data_inicio"))
-        fim = converter_data(formulario.get("data_fim"))
-        if not inicio or not fim:
-            return None, None, "Informe as datas inicial e final."
-        if fim < inicio:
-            return None, None, "A data final deve ser igual ou posterior à data inicial."
-        return inicio, fim, None
-
-    if tipo == "semana":
-        referencia = converter_data(formulario.get("data_referencia"))
-        if not referencia:
-            return None, None, "Informe uma data para localizar a semana."
-        inicio = referencia - timedelta(days=(referencia.weekday() + 1) % 7)
-        return inicio, inicio + timedelta(days=6), None
-
-    if tipo == "mes":
-        try:
-            valor_mes = formulario.get("mes", "")
-            if "/" in valor_mes:
-                mes, ano = (int(parte) for parte in valor_mes.split("/"))
-            else:
-                ano, mes = (int(parte) for parte in valor_mes.split("-"))
-            inicio = date(ano, mes, 1)
-        except (TypeError, ValueError):
-            return None, None, "Informe um mês válido."
-        return inicio, date(ano, mes, monthrange(ano, mes)[1]), None
-
     try:
+        mes = int(formulario.get("mes", ""))
         ano = int(formulario.get("ano", ""))
-        return date(ano, 1, 1), date(ano, 12, 31), None
+        if mes not in range(1, 13) or ano not in range(2000, 2101):
+            raise ValueError
+        inicio = date(ano, mes, 1)
+        return inicio, date(ano, mes, monthrange(ano, mes)[1]), None
     except (TypeError, ValueError):
-        return None, None, "Informe um ano válido."
+        return None, None, "Selecione um mês e ano válidos."
 
 
 def buscar_registros(inicio, fim, ids_usuarios=None):
@@ -328,13 +292,24 @@ def criar_planilha_controle_acesso():
 
 
 def dados_formulario(formulario):
+    hoje = datetime.now(FUSO_HORARIO).date()
+    try:
+        mes = int(formulario.get("mes", hoje.month))
+        if mes not in range(1, 13):
+            mes = hoje.month
+    except (TypeError, ValueError):
+        mes = hoje.month
+
+    try:
+        ano = int(formulario.get("ano", hoje.year))
+        if ano not in range(2000, 2101):
+            ano = hoje.year
+    except (TypeError, ValueError):
+        ano = hoje.year
+
     return {
-        "periodo": formulario.get("periodo", "dia"),
-        "data_referencia": formulario.get("data_referencia", ""),
-        "data_inicio": formulario.get("data_inicio", ""),
-        "data_fim": formulario.get("data_fim", ""),
-        "mes": formulario.get("mes", ""),
-        "ano": formulario.get("ano", ""),
+        "mes": str(mes),
+        "ano": str(ano),
         "escopos": formulario.getlist("escopo"),
     }
 
@@ -394,6 +369,7 @@ def exibir_planilha():
         colaboradores=buscar_usuarios_exportacao(),
         campos=campos,
         erro_planilha=erro,
+        meses_abreviados=MESES_ABREVIADOS,
     )
 
 

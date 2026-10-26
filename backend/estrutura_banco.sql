@@ -116,6 +116,14 @@ CREATE TABLE IF NOT EXISTS quantidades_batidas_semanais (
     PRIMARY KEY (usuario_id, dia_semana)
 );
 
+CREATE TABLE IF NOT EXISTS registros_ponto_verificados (
+    usuario_id BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    data_ponto DATE NOT NULL,
+    aviso_emitido BOOLEAN NOT NULL DEFAULT FALSE,
+    verificado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (usuario_id, data_ponto)
+);
+
 ALTER TABLE jornadas_usuarios
 ALTER COLUMN intervalo DROP NOT NULL,
 ALTER COLUMN retorno_intervalo DROP NOT NULL;

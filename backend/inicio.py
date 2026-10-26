@@ -97,6 +97,59 @@ def validar_quantidades_semanais(valores, dia_atual):
     return valores
 
 
+def avisar_registro_incompleto(cursor, usuario_id, quantidades_semanais, hoje):
+    cursor.execute(
+        """SELECT registro.data_ponto,
+                  ARRAY_AGG(registro.tipo_batida ORDER BY registro.registrado_em, registro.id)
+           FROM registros_ponto AS registro
+           LEFT JOIN registros_ponto_verificados AS verificacao
+             ON verificacao.usuario_id = registro.usuario_id
+            AND verificacao.data_ponto = registro.data_ponto
+           WHERE registro.usuario_id = %s
+             AND registro.data_ponto < %s
+             AND verificacao.usuario_id IS NULL
+           GROUP BY registro.data_ponto
+           ORDER BY registro.data_ponto""",
+        (usuario_id, hoje),
+    )
+    datas_verificadas = []
+    primeiro_aviso = None
+    for data_ponto, tipos_registrados in cursor.fetchall():
+        quantidade_prevista = quantidades_semanais[data_ponto.weekday()]
+        tipos_previstos = (
+            ("Entrada", "Saída") if quantidade_prevista == 2
+            else TIPOS_BATIDA if quantidade_prevista == 4
+            else ()
+        )
+        tipos_faltantes = [
+            tipo for tipo in tipos_previstos if tipo not in set(tipos_registrados)
+        ]
+        aviso_emitido = bool(tipos_faltantes)
+        datas_verificadas.append((usuario_id, data_ponto, aviso_emitido))
+        if aviso_emitido and primeiro_aviso is None:
+            data_formatada = data_ponto.strftime("%d/%m/%y")
+            if tipos_faltantes == ["Saída"]:
+                primeiro_aviso = (
+                    f"No dia {data_formatada} você não registrou sua saída. "
+                    "Se atente ao dia de hoje."
+                )
+            else:
+                nomes_faltantes = ", ".join(tipos_faltantes)
+                primeiro_aviso = (
+                    f"No dia {data_formatada} seu registro ficou incompleto "
+                    f"(faltaram: {nomes_faltantes}). Se atente ao dia de hoje."
+                )
+
+    if datas_verificadas:
+        cursor.executemany(
+            """INSERT INTO registros_ponto_verificados
+               (usuario_id, data_ponto, aviso_emitido)
+               VALUES (%s, %s, %s) ON CONFLICT DO NOTHING""",
+            datas_verificadas,
+        )
+    return primeiro_aviso
+
+
 def _registrar_ponto(exigir_localizacao):
     usuario_id = session["usuario_id"]
     agora = datetime.now(FUSO_HORARIO)
@@ -236,6 +289,7 @@ def _registrar_ponto(exigir_localizacao):
                         (usuario_id, dia_semana, quantidade),
                     )
                 quantidade_prevista = 4
+                quantidades_semanais[agora.weekday()] = 4
                 tipos_batida = TIPOS_BATIDA
                 cursor.execute(
                     """SELECT id FROM registros_ponto
@@ -289,10 +343,15 @@ def _registrar_ponto(exigir_localizacao):
                 ),
             )
 
+            aviso_registro_incompleto = avisar_registro_incompleto(
+                cursor, usuario_id, quantidades_semanais, agora.date()
+            )
+
     return jsonify(
         sucesso=True,
         tipo_batida=tipo_batida,
         horario=agora.strftime("%H:%M:%S"),
         mensagem=f"{tipo_batida} registrada às {agora.strftime('%H:%M:%S')}.",
         confirmacao_quantidade=confirmar_quantidade,
+        aviso_registro_incompleto=aviso_registro_incompleto,
     )
