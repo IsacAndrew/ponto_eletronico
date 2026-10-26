@@ -9,7 +9,7 @@
     <header class="cabecalho-planilha">
         <span class="sobrelinha-planilha">Relatórios</span>
         <h1>Planilha</h1>
-        <p>Escolha as pessoas e o mês para gerar o documento.</p>
+        <p>Gere uma folha mensal individual, pronta para impressão em A4.</p>
     </header>
     {% if erro_planilha %}<p class="erro-planilha" role="alert">{{ erro_planilha }}</p>{% endif %}
     <form class="filtros-planilha" method="post" action="{{ url_for('planilha.exibir_planilha') }}">

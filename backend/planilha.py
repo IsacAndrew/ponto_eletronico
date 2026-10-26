@@ -1,13 +1,12 @@
 from calendar import monthrange
 from collections import defaultdict
-from copy import copy
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from io import BytesIO
-from pathlib import Path
+from statistics import median
 from zoneinfo import ZoneInfo
 
 from flask import Blueprint, request, send_file
-from openpyxl import Workbook, load_workbook
+from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 
 from .banco_dados import criar_conexao
@@ -26,10 +25,12 @@ MESES_ABREVIADOS = (
 
 def buscar_usuarios_exportacao():
     garantir_estrutura_usuarios()
+    garantir_estrutura_jornada()
     with criar_conexao() as conexao:
         return conexao.execute(
             """
-            SELECT id, nome_completo, tipo_conta, ativo, rg
+            SELECT id, nome_completo, tipo_conta, ativo, rg, funcao,
+                   quantidade_batidas, dias_trabalho_semana
             FROM usuarios
             ORDER BY nome_completo
             """
@@ -123,7 +124,7 @@ def buscar_jornadas(ids_usuarios=None):
         elif quantidade:
             jornadas[id_usuario][dia] = (None, None, None, None, quantidade)
         else:
-            jornadas.get(id_usuario, {}).pop(dia, None)
+            jornadas.setdefault(id_usuario, {})[dia] = (None, None, None, None, 0)
     return jornadas
 
 
@@ -132,102 +133,434 @@ MESES = (
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 )
+TIPOS_POR_POSICAO = {
+    "Entrada": 0,
+    "Intervalo": 1,
+    "Retorno intervalo": 2,
+    "Saída": 3,
+}
+MINIMO_AMOSTRAS_HORARIO = 3
+SEMANAS_PARA_ESTIMATIVA = 8
 
 
-def iterar_meses(inicio, fim):
-    ano, mes = inicio.year, inicio.month
-    while (ano, mes) <= (fim.year, fim.month):
-        primeiro_dia = date(ano, mes, 1)
-        ultimo_dia = date(ano, mes, monthrange(ano, mes)[1])
-        yield primeiro_dia, ultimo_dia
-        mes += 1
-        if mes > 12:
-            mes = 1
-            ano += 1
-
-
-def nome_aba_unico(nome, inicio_mes, titulos_existentes):
-    base = f"{nome} {inicio_mes.month:02d}-{inicio_mes.year}"
-    base = "".join("_" if caractere in "[]:*?/\\" else caractere for caractere in base)
+def nome_aba_unico(nome, titulos_existentes):
+    base = "".join("_" if caractere in "[]:*?/\\" else caractere for caractere in nome)
     base = base.strip("'") or "Folha de Frequência"
     titulo = base[:31]
     contador = 2
-    while titulo in titulos_existentes:
+    titulos_normalizados = {titulo_existente.casefold() for titulo_existente in titulos_existentes}
+    while titulo.casefold() in titulos_normalizados:
         sufixo = f" ({contador})"
         titulo = f"{base[:31 - len(sufixo)]}{sufixo}"
         contador += 1
     return titulo
 
 
-def preencher_folha(planilha, usuario, jornada, presencas, inicio, fim, inicio_mes):
-    id_usuario, nome, tipo_conta, ativo, rg = usuario
-    planilha["C2"] = nome
-    planilha["D3"] = "Ativo" if ativo else "Inativo"
-    planilha["J3"] = tipo_conta
-    planilha["M2"] = rg or ""
-    planilha["U5"] = f"{MESES[inicio_mes.month - 1]} / {inicio_mes.year}"
+def formatar_duracao(minutos):
+    horas, restante = divmod(max(0, int(minutos)), 60)
+    return f"{horas}h{restante:02d}"
 
-    dias_jornada = sorted(jornada)
-    if dias_jornada:
-        planilha["R3"] = ", ".join(DIAS_SEMANA[dia] for dia in dias_jornada)
 
-    dias_com_presenca = presencas.get(id_usuario, set())
+def valor_duracao_excel(minutos):
+    if minutos < 0:
+        horas, restante = divmod(abs(int(minutos)), 60)
+        return f"-{horas:02d}:{restante:02d}"
+    return timedelta(minutes=int(minutos))
+
+
+def minutos_entre(inicio, fim):
+    if not inicio or not fim:
+        return 0
+    return max(0, int((fim.hour * 60 + fim.minute) - (inicio.hour * 60 + inicio.minute)))
+
+
+def agrupar_batidas(registros):
+    por_usuario_dia = defaultdict(dict)
+    for registro in registros:
+        id_usuario, _, _, data_ponto, tipo_batida, registrado_em = registro
+        if id_usuario is None:
+            continue
+        por_usuario_dia[id_usuario].setdefault(data_ponto, {})[tipo_batida] = (
+            registrado_em.astimezone(FUSO_HORARIO).time().replace(second=0, microsecond=0)
+        )
+    return por_usuario_dia
+
+
+def estimar_jornadas(jornadas, batidas, usuarios, inicio_mes):
+    limite = inicio_mes - timedelta(weeks=SEMANAS_PARA_ESTIMATIVA)
+    amostras = defaultdict(list)
+    for id_usuario, dias in batidas.items():
+        for data_ponto, registros_dia in dias.items():
+            if not limite <= data_ponto < inicio_mes:
+                continue
+            for tipo, horario in registros_dia.items():
+                amostras[(id_usuario, data_ponto.weekday(), tipo)].append(horario)
+
+    jornadas_estimadas = {}
+    for usuario in usuarios:
+        id_usuario = usuario[0]
+        jornadas_estimadas[id_usuario] = {}
+        for dia_semana in range(7):
+            jornada_manual = jornadas.get(id_usuario, {}).get(dia_semana)
+            if jornada_manual:
+                entrada, intervalo, retorno, saida, quantidade = jornada_manual
+            elif not jornadas.get(id_usuario) and dia_semana < usuario[7]:
+                quantidade = usuario[6]
+                entrada = intervalo = retorno = saida = None
+            else:
+                continue
+            if quantidade == 0:
+                continue
+            horarios_manuais = {
+                "Entrada": entrada,
+                "Intervalo": intervalo,
+                "Retorno intervalo": retorno,
+                "Saída": saida,
+            }
+            tipos_esperados = (
+                ("Entrada", "Saída") if quantidade == 2 else tuple(TIPOS_POR_POSICAO)
+            )
+            horarios_estimados = {}
+            for tipo in tipos_esperados:
+                exemplos = amostras[(id_usuario, dia_semana, tipo)]
+                if len(exemplos) >= MINIMO_AMOSTRAS_HORARIO:
+                    minutos_medianos = int(median(
+                        horario.hour * 60 + horario.minute for horario in exemplos
+                    ))
+                    arredondados = int((minutos_medianos + 15) // 30) * 30
+                    horarios_estimados[tipo] = time(
+                        (arredondados // 60) % 24, arredondados % 60
+                    )
+                else:
+                    horarios_estimados[tipo] = horarios_manuais[tipo]
+
+            horarios_em_ordem = [horarios_estimados[tipo] for tipo in tipos_esperados]
+            if any(horario is None for horario in horarios_em_ordem):
+                horarios_estimados = horarios_manuais
+            elif any(
+                (proximo.hour, proximo.minute) <= (anterior.hour, anterior.minute)
+                for anterior, proximo in zip(horarios_em_ordem, horarios_em_ordem[1:])
+            ):
+                horarios_estimados = horarios_manuais
+
+            jornadas_estimadas[id_usuario][dia_semana] = {
+                "quantidade": quantidade,
+                "horarios": horarios_estimados,
+            }
+    return jornadas_estimadas
+
+
+def horas_previstas_jornada(jornada):
+    horarios = jornada["horarios"]
+    if jornada["quantidade"] == 2:
+        if not horarios.get("Entrada") or not horarios.get("Saída"):
+            return None
+        return minutos_entre(horarios.get("Entrada"), horarios.get("Saída"))
+    if any(not horarios.get(tipo) for tipo in TIPOS_POR_POSICAO):
+        return None
+    return (
+        minutos_entre(horarios.get("Entrada"), horarios.get("Intervalo"))
+        + minutos_entre(horarios.get("Retorno intervalo"), horarios.get("Saída"))
+    )
+
+
+def horas_realizadas(batidas, quantidade):
+    if quantidade == 2:
+        return minutos_entre(batidas.get("Entrada"), batidas.get("Saída"))
+    return (
+        minutos_entre(batidas.get("Entrada"), batidas.get("Intervalo"))
+        + minutos_entre(batidas.get("Retorno intervalo"), batidas.get("Saída"))
+    )
+
+
+def aplicar_estilo(celula, *, fundo=None, cor="243447", negrito=False,
+                   tamanho=9, alinhamento="center", borda=None):
+    celula.font = Font(name="Aptos", size=tamanho, bold=negrito, color=cor)
+    if fundo:
+        celula.fill = PatternFill("solid", fgColor=fundo)
+    celula.alignment = Alignment(
+        horizontal=alinhamento, vertical="center", wrap_text=True, shrink_to_fit=True
+    )
+    if borda:
+        celula.border = borda
+
+
+def configurar_folha(planilha, usuario, jornadas_estimadas, batidas_usuario,
+                     inicio_mes):
+    id_usuario, nome, tipo_conta, ativo, rg, funcao, _, _ = usuario
+    azul = "31425E"
+    azul_claro = "EAF0F5"
+    verde_claro = "E8F1EC"
+    cinza = "D6DEE5"
+    linha_fina = Side(style="thin", color=cinza)
+    borda = Border(left=linha_fina, right=linha_fina, top=linha_fina, bottom=linha_fina)
+
+    for intervalo in ("A1:H1", "A2:H2", "B4:E4", "G4:H4", "B5:E5", "G5:H5",
+                      "B6:H6", "A8:B8", "A9:B9", "C8:D8", "C9:D9", "E8:F8",
+                      "E9:F9", "G8:H8", "G9:H9", "A10:H10", "A44:H44",
+                      "A45:C45", "D45:E45", "F45:G45",
+                      "A55:B55", "D55:E55", "G55:H55",
+                      "A56:B56", "D56:E56", "G56:H56"):
+        planilha.merge_cells(intervalo)
+
+    planilha["A1"] = "RELATÓRIO MENSAL DE FREQUÊNCIA"
+    planilha["A2"] = f"{MESES[inicio_mes.month - 1].upper()} DE {inicio_mes.year}"
+    planilha["A4"], planilha["B4"] = "NOME COMPLETO", nome
+    planilha["F4"], planilha["G4"] = "RG", rg or "Não informado"
+    planilha["A5"], planilha["B5"] = "FUNÇÃO", funcao or "Não informada"
+    planilha["F5"], planilha["G5"] = "CATEGORIA", tipo_conta
+    planilha["A6"] = "JORNADA SEMANAL ESTIMADA"
+
+    dias_previstos = []
+    total_semanal = 0
+    for dia_semana, jornada in sorted(jornadas_estimadas.get(id_usuario, {}).items()):
+        horarios = jornada["horarios"]
+        quantidade = jornada["quantidade"]
+        total_dia = horas_previstas_jornada(jornada)
+        if total_dia is not None:
+            total_semanal += total_dia
+        if quantidade == 2:
+            texto_horarios = (
+                f"{horarios['Entrada'].strftime('%H:%M')}–{horarios['Saída'].strftime('%H:%M')}"
+                if horarios.get("Entrada") and horarios.get("Saída") else "horário não estimado"
+            )
+        else:
+            chaves = ("Entrada", "Intervalo", "Retorno intervalo", "Saída")
+            texto_horarios = " · ".join(
+                horarios[chave].strftime("%H:%M") if horarios.get(chave) else "—"
+                for chave in chaves
+            )
+        dias_previstos.append(
+            f"{DIAS_SEMANA[dia_semana]} {texto_horarios} "
+            f"({formatar_duracao(total_dia) if total_dia is not None else '—'})"
+        )
+    planilha["B6"] = "   |   ".join(dias_previstos) or "Jornada não configurada"
+
+    colunas_resumo = {
+        "A8": "HORAS REALIZADAS NO MÊS",
+        "C8": "HORAS PREVISTAS NO MÊS",
+        "E8": "SALDO DO MÊS",
+        "G8": "JORNADA SEMANAL",
+    }
+    for celula, texto in colunas_resumo.items():
+        planilha[celula] = texto
+    planilha["A9"] = 0
+    planilha["C9"] = 0
+    planilha["E9"] = 0
+    planilha["G9"] = timedelta(minutes=total_semanal)
+    planilha["A11"] = "DIA"
+    for coluna, titulo in enumerate(("1ª ENTRADA", "2ª INTERVALO", "3ª RETORNO", "4ª SAÍDA",
+                                     "PREVISTAS", "REALIZADAS", "OCORRÊNCIA"), start=2):
+        planilha.cell(11, coluna, titulo)
+
     hoje = datetime.now(FUSO_HORARIO).date()
     total_dias_mes = monthrange(inicio_mes.year, inicio_mes.month)[1]
+    fim_mes = date(inicio_mes.year, inicio_mes.month, total_dias_mes)
+    soma_realizadas = 0
+    soma_previstas = 0
+    totais_semanais = defaultdict(
+        lambda: {"previstas": 0, "realizadas": 0, "previsao_parcial": False}
+    )
+    previsao_mensal_parcial = False
     for numero_dia in range(1, 32):
         linha = 11 + numero_dia
         if numero_dia > total_dias_mes:
             planilha.row_dimensions[linha].hidden = True
             continue
         dia = date(inicio_mes.year, inicio_mes.month, numero_dia)
-        planilha.cell(linha, 8, DIAS_SEMANA[dia.weekday()])
-        if dia < inicio or dia > fim:
+        jornada = jornadas_estimadas.get(id_usuario, {}).get(dia.weekday())
+        batidas_dia = batidas_usuario.get(dia, {})
+        planilha.cell(linha, 1, f"{DIAS_SEMANA[dia.weekday()]} · {dia:%d/%m/%Y}")
+
+        for tipo, coluna in (("Entrada", 2), ("Intervalo", 3),
+                             ("Retorno intervalo", 4), ("Saída", 5)):
+            valor = batidas_dia.get(tipo)
+            planilha.cell(linha, coluna, valor if valor else "—")
+            if valor:
+                planilha.cell(linha, coluna).number_format = "hh:mm"
+
+        prevista = horas_previstas_jornada(jornada) if jornada else 0
+        conta_para_previsao = bool(jornada and prevista is not None and dia <= hoje)
+        if conta_para_previsao:
+            soma_previstas += prevista
+        inicio_semana = dia - timedelta(days=dia.weekday())
+        if conta_para_previsao:
+            totais_semanais[inicio_semana]["previstas"] += prevista
+        elif jornada and prevista is None and dia <= hoje:
+            previsao_mensal_parcial = True
+            totais_semanais[inicio_semana]["previsao_parcial"] = True
+        planilha.cell(
+            linha, 6,
+            timedelta(minutes=prevista) if jornada and prevista is not None else "—",
+        )
+
+        quantidade = jornada["quantidade"] if jornada else 0
+        realizada = horas_realizadas(batidas_dia, quantidade) if jornada else 0
+        tem_batida = bool(batidas_dia)
+        if tem_batida:
+            soma_realizadas += realizada
+            totais_semanais[inicio_semana]["realizadas"] += realizada
+            esperados = ("Entrada", "Saída") if quantidade == 2 else (
+                ("Entrada", "Intervalo", "Retorno intervalo", "Saída") if quantidade == 4 else ()
+            )
+            ocorrencia = "Completo" if esperados and all(tipo in batidas_dia for tipo in esperados) else "Incompleto"
+        elif jornada and dia <= hoje and ativo:
+            ocorrencia = "Ausente"
+        elif jornada:
+            ocorrencia = "Previsto"
+        else:
+            ocorrencia = "Folga"
+        planilha.cell(linha, 7, timedelta(minutes=realizada) if tem_batida else "—")
+        planilha.cell(linha, 8, ocorrencia)
+
+        cor_linha = "FFFFFF" if numero_dia % 2 else "F5F7F9"
+        if ocorrencia == "Ausente":
+            cor_linha = "FCEEEE"
+        elif ocorrencia == "Incompleto":
+            cor_linha = "FFF6E5"
+        for coluna in range(1, 9):
+            aplicar_estilo(planilha.cell(linha, coluna), fundo=cor_linha, tamanho=8, borda=borda)
+            if coluna in (6, 7):
+                planilha.cell(linha, coluna).number_format = '[h]:mm'
+
+    planilha["A9"] = timedelta(minutes=soma_realizadas)
+    planilha["C9"] = timedelta(minutes=soma_previstas)
+    planilha["E9"] = (
+        "Parcial" if previsao_mensal_parcial
+        else valor_duracao_excel(soma_realizadas - soma_previstas)
+    )
+    if previsao_mensal_parcial:
+        planilha["C8"] = "HORAS PREVISTAS*"
+    for celula in ("A9", "C9", "E9", "G9"):
+        planilha[celula].number_format = '[h]:mm;[Red]-[h]:mm'
+
+    planilha["A44"] = "RESUMO SEMANAL"
+    planilha["A45"] = "SEMANA"
+    planilha["D45"] = "HORAS PREVISTAS"
+    planilha["F45"] = "HORAS REALIZADAS"
+    planilha["H45"] = "SALDO"
+    semanas_do_mes = []
+    for dia_numero in range(1, total_dias_mes + 1):
+        dia = date(inicio_mes.year, inicio_mes.month, dia_numero)
+        inicio_semana = dia - timedelta(days=dia.weekday())
+        if inicio_semana not in semanas_do_mes:
+            semanas_do_mes.append(inicio_semana)
+    for indice in range(6):
+        linha = 46 + indice
+        if indice >= len(semanas_do_mes):
+            planilha.row_dimensions[linha].hidden = True
             continue
-        if dia in dias_com_presenca:
-            planilha.cell(linha, 1, nome)
-        elif ativo and dia <= hoje and dia.weekday() in jornada:
-            planilha.cell(linha, 1, "Ausente")
+        inicio_semana = semanas_do_mes[indice]
+        fim_semana = inicio_semana + timedelta(days=6)
+        inicio_intervalo = max(inicio_semana, inicio_mes)
+        fim_intervalo = min(fim_semana, fim_mes)
+        totais = totais_semanais[inicio_semana]
+        realizados_semana = totais["realizadas"]
+        previstas_semana = totais["previstas"]
+        planilha.cell(linha, 1, f"{inicio_intervalo:%d/%m} a {fim_intervalo:%d/%m}")
+        planilha.merge_cells(start_row=linha, start_column=1, end_row=linha, end_column=3)
+        total_previsto_semana = (
+            "Parcial" if totais["previsao_parcial"]
+            else timedelta(minutes=previstas_semana) if previstas_semana else "—"
+        )
+        planilha.cell(linha, 4, total_previsto_semana)
+        planilha.merge_cells(start_row=linha, start_column=4, end_row=linha, end_column=5)
+        planilha.cell(linha, 6, timedelta(minutes=realizados_semana))
+        planilha.merge_cells(start_row=linha, start_column=6, end_row=linha, end_column=7)
+        planilha.cell(
+            linha, 8,
+            "Parcial" if totais["previsao_parcial"]
+            else valor_duracao_excel(realizados_semana - previstas_semana),
+        )
+        for coluna in range(1, 9):
+            aplicar_estilo(planilha.cell(linha, coluna), fundo="F5F7F9", tamanho=8, borda=borda)
+        for coluna in (4, 6):
+            planilha.cell(linha, coluna).number_format = "[h]:mm"
 
-    for celula in (planilha["C2"], planilha["D3"], planilha["J3"], planilha["M2"], planilha["R3"], planilha["U5"]):
-        alinhamento = copy(celula.alignment)
-        alinhamento.shrink_to_fit = True
-        celula.alignment = alinhamento
+    planilha["A53"] = (
+        "Batidas reais mantidas conforme registradas. Horários habituais usam a mediana de ao menos "
+        "3 registros nas 8 semanas anteriores, arredondada em 30 minutos; sem amostras suficientes, "
+        "usa-se a jornada cadastrada. *Parcial indica dias sem dados para estimar a carga prevista."
+    )
+    planilha.merge_cells("A53:H53")
+    planilha["A55"] = "Sandra Rio Tinto"
+    planilha["A56"] = "DIREÇÃO"
+    planilha["D55"] = "Beatriz Santo Silva"
+    planilha["D56"] = "COORDENAÇÃO"
+    planilha["G55"] = "Funcionário(a)"
+    planilha["G56"] = "ASSINATURA"
 
-    planilha.sheet_view.showGridLines = False
-    planilha.print_area = "A1:Z45"
-    planilha.page_setup.fitToWidth = 1
-    planilha.page_setup.fitToHeight = 1
-    planilha.sheet_properties.pageSetUpPr.fitToPage = True
-
-
-def criar_planilha(registros, jornadas, usuarios, inicio, fim):
-    caminho_modelo = Path(__file__).resolve().parent / "modelos" / "xlsc_base.xlsx"
-    workbook = load_workbook(caminho_modelo)
-    modelo = workbook.active
-    titulos_existentes = set()
-    presencas = defaultdict(set)
-    for registro in registros:
-        if registro[0] is not None:
-            presencas[registro[0]].add(registro[3])
-
-    for usuario in usuarios:
-        id_usuario = usuario[0]
-        jornada_usuario = jornadas.get(id_usuario, {})
-        for inicio_mes, fim_mes in iterar_meses(inicio, fim):
-            planilha = workbook.copy_worksheet(modelo)
-            planilha.title = nome_aba_unico(usuario[1], inicio_mes, titulos_existentes)
-            titulos_existentes.add(planilha.title)
-            preencher_folha(
-                planilha,
-                usuario,
-                jornada_usuario,
-                presencas,
-                max(inicio, inicio_mes),
-                min(fim, fim_mes),
-                inicio_mes,
+    aplicar_estilo(planilha["A1"], fundo=azul, cor="FFFFFF", negrito=True, tamanho=15)
+    aplicar_estilo(planilha["A2"], fundo=azul_claro, cor=azul, negrito=True, tamanho=10)
+    for linha in (4, 5):
+        aplicar_estilo(planilha.cell(linha, 1), fundo=azul_claro, cor=azul, negrito=True, tamanho=8, alinhamento="left")
+        aplicar_estilo(planilha.cell(linha, 6), fundo=azul_claro, cor=azul, negrito=True, tamanho=8, alinhamento="left")
+    aplicar_estilo(planilha["A6"], fundo=azul_claro, cor=azul, negrito=True, tamanho=8, alinhamento="left")
+    for intervalo in ("B4", "G4", "B5", "G5", "B6"):
+        aplicar_estilo(planilha[intervalo], fundo="FFFFFF", tamanho=8, alinhamento="left", borda=borda)
+    for celula in ("A8", "C8", "E8", "G8"):
+        aplicar_estilo(planilha[celula], fundo=azul, cor="FFFFFF", negrito=True, tamanho=7)
+    for celula in ("A9", "C9", "E9", "G9"):
+        aplicar_estilo(planilha[celula], fundo=verde_claro, cor=azul, negrito=True, tamanho=13)
+    for coluna in range(1, 9):
+        aplicar_estilo(planilha.cell(11, coluna), fundo=azul, cor="FFFFFF", negrito=True, tamanho=7, borda=borda)
+    aplicar_estilo(planilha["A44"], fundo=azul, cor="FFFFFF", negrito=True, tamanho=8, alinhamento="left")
+    for coluna in range(1, 9):
+        aplicar_estilo(planilha.cell(45, coluna), fundo=azul_claro, cor=azul, negrito=True, tamanho=7, borda=borda)
+    aplicar_estilo(planilha["A53"], cor="65717D", tamanho=7, alinhamento="left")
+    for assinatura, cargo in (("A55", "A56"), ("D55", "D56"), ("G55", "G56")):
+        aplicar_estilo(planilha[assinatura], cor=azul, negrito=True, tamanho=8)
+        aplicar_estilo(planilha[cargo], cor="65717D", negrito=True, tamanho=7)
+    for colunas in ((1, 2), (4, 5), (7, 8)):
+        for coluna in colunas:
+            planilha.cell(54, coluna).border = Border(
+                bottom=Side(style="thin", color=azul)
             )
 
-    workbook.remove(modelo)
+    larguras = (18, 10, 10, 10, 10, 10, 10, 14)
+    for indice, largura in enumerate(larguras, start=1):
+        planilha.column_dimensions[chr(64 + indice)].width = largura
+    alturas = {1: 30, 2: 20, 4: 21, 5: 21, 6: 36, 8: 22, 9: 30, 10: 8, 11: 24,
+               43: 7, 44: 18, 45: 18, 52: 6, 53: 20, 54: 18, 55: 20, 56: 16}
+    for linha, altura in alturas.items():
+        planilha.row_dimensions[linha].height = altura
+    for linha in range(12, 43):
+        planilha.row_dimensions[linha].height = 13
+
+    planilha.sheet_view.showGridLines = False
+    planilha.freeze_panes = "A12"
+    planilha.print_area = "A1:H56"
+    planilha.page_setup.orientation = "portrait"
+    planilha.page_setup.paperSize = planilha.PAPERSIZE_A4
+    planilha.page_setup.fitToWidth = 1
+    planilha.page_setup.fitToHeight = 1
+    planilha.print_options.horizontalCentered = True
+    planilha.page_margins.left = 0.25
+    planilha.page_margins.right = 0.25
+    planilha.page_margins.top = 0.3
+    planilha.page_margins.bottom = 0.3
+    planilha.sheet_properties.pageSetUpPr.fitToPage = True
+    planilha.oddFooter.center.text = "Ponto Eletrônico · Relatório mensal de frequência"
+    planilha.oddFooter.center.size = 7
+    planilha.oddFooter.center.font = "Aptos,Regular"
+
+
+def criar_planilha(registros, jornadas, usuarios, inicio):
+    workbook = Workbook()
+    workbook.properties.creator = "Sistema de Ponto Eletrônico"
+    workbook.properties.title = "Relatório mensal de frequência"
+    primeira = workbook.active
+    primeira.title = nome_aba_unico(usuarios[0][1], set())
+    titulos_existentes = {primeira.title}
+    batidas = agrupar_batidas(registros)
+    estimativas = estimar_jornadas(jornadas, batidas, usuarios, inicio)
+    configurar_folha(primeira, usuarios[0], estimativas, batidas.get(usuarios[0][0], {}), inicio)
+
+    for usuario in usuarios[1:]:
+        planilha = workbook.create_sheet(nome_aba_unico(usuario[1], titulos_existentes))
+        titulos_existentes.add(planilha.title)
+        configurar_folha(planilha, usuario, estimativas, batidas.get(usuario[0], {}), inicio)
+
     arquivo = BytesIO()
     workbook.save(arquivo)
     arquivo.seek(0)
@@ -352,10 +685,11 @@ def exibir_planilha():
                 erro = "Nenhum usuário corresponde à seleção."
             else:
                 ids_usuarios = [usuario[0] for usuario in selecionados]
-                registros = buscar_registros(inicio, fim, ids_usuarios)
+                inicio_estimativa = inicio - timedelta(weeks=SEMANAS_PARA_ESTIMATIVA)
+                registros = buscar_registros(inicio_estimativa, fim, ids_usuarios)
                 jornadas = buscar_jornadas(ids_usuarios)
-                arquivo = criar_planilha(registros, jornadas, selecionados, inicio, fim)
-                nome_arquivo = f"ponto_{inicio.isoformat()}_{fim.isoformat()}.xlsx"
+                arquivo = criar_planilha(registros, jornadas, selecionados, inicio)
+                nome_arquivo = f"frequencia_{inicio.year}_{inicio.month:02d}.xlsx"
                 return send_file(
                     arquivo,
                     as_attachment=True,
