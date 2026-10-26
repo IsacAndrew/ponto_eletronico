@@ -15,6 +15,7 @@ from .db import rota_db
 from .grade_curricular import rota_grade_curricular
 from .chat_suporte import rota_chat_suporte
 from .ponto_qr import rota_ponto_qr
+from .atestados import rota_atestados
 
 diretorio_projeto = Path(__file__).resolve().parent.parent
 load_dotenv(diretorio_projeto / ".env")
@@ -71,6 +72,7 @@ app.register_blueprint(rota_db)
 app.register_blueprint(rota_grade_curricular)
 app.register_blueprint(rota_chat_suporte)
 app.register_blueprint(rota_ponto_qr)
+app.register_blueprint(rota_atestados)
 
 
 if __name__ == "__main__":

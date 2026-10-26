@@ -1,0 +1,33 @@
+.pagina-atestados { width:min(100%, 1050px); margin-inline:auto; }
+.cabecalho-atestados { margin-bottom:22px; text-align:center; }
+.cabecalho-atestados a { display:inline-block; margin-bottom:12px; color:#536982; font-size:.88rem; text-decoration:none; }
+.cabecalho-atestados h1 { margin:0; color:#28384d; }
+.painel-atestado,.lista-atestados { margin-bottom:20px; padding:clamp(16px,3vw,23px); border:1px solid #dbe3ec; border-radius:13px; background:linear-gradient(145deg,#fff,#f4f7fb); box-shadow:0 12px 28px rgb(37 55 79 / 7%); }
+.painel-atestado h2,.lista-atestados h2 { margin:0 0 17px; color:#26364b; font-size:1.05rem; }
+.formulario-atestado { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.formulario-atestado label { display:grid; align-content:start; gap:6px; color:#35465d; font-size:.86rem; font-weight:600; }
+.formulario-atestado input,.formulario-atestado select { width:100%; min-width:0; min-height:43px; padding:9px 11px; border:1px solid #cbd5e1; border-radius:8px; background:#fff; color:#243449; font:inherit; }
+.campos-horario-atestado { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.campo-arquivo-atestado { grid-column:1/-1; }
+.formulario-atestado button,.botao-remover-atestado { min-height:42px; padding:9px 15px; border:0; border-radius:8px; background:#31445c; color:#fff; font:inherit; font-weight:650; cursor:pointer; }
+.formulario-atestado button { justify-self:start; }
+.mensagem-atestado { margin:0 0 15px; padding:11px 14px; border:1px solid #c9dfd0; border-radius:8px; background:#eff8f1; color:#28603c; }
+.tabela-atestados-conteiner { overflow:auto; border:1px solid #dbe3ec; border-radius:9px; background:#fff; }
+.tabela-atestados-conteiner table { width:100%; border-collapse:collapse; text-align:left; }
+.tabela-atestados-conteiner th,.tabela-atestados-conteiner td { padding:11px 12px; border-bottom:1px solid #e7edf2; color:#35465d; font-size:.84rem; }
+.tabela-atestados-conteiner th { background:#edf2f6; color:#344b63; font-size:.75rem; letter-spacing:.03em; }
+.tabela-atestados-conteiner td a { color:#314f70; overflow-wrap:anywhere; }
+.botao-remover-atestado { min-height:34px; padding:6px 10px; background:#f7eeee; color:#8f3c3c; font-size:.8rem; }
+.sem-atestados { margin:0; color:#64748b; }
+@media(max-width:700px) {
+    .formulario-atestado { grid-template-columns:1fr; }
+    .campos-horario-atestado { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .campo-arquivo-atestado { grid-column:auto; }
+    .tabela-atestados-conteiner { overflow:visible; border:0; background:transparent; }
+    .tabela-atestados-conteiner table,.tabela-atestados-conteiner tbody { display:grid; gap:10px; }
+    .tabela-atestados-conteiner thead { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); }
+    .tabela-atestados-conteiner tr { display:grid; gap:7px; padding:13px; border:1px solid #dbe3ec; border-radius:9px; background:#fff; }
+    .tabela-atestados-conteiner td { display:grid; grid-template-columns:105px minmax(0,1fr); gap:8px; padding:0; border:0; overflow-wrap:anywhere; }
+    .tabela-atestados-conteiner td::before { content:attr(data-titulo); color:#697b90; font-size:.75rem; font-weight:650; }
+    .tabela-atestados-conteiner td:last-child { display:block; margin-top:4px; }
+}

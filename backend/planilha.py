@@ -13,6 +13,7 @@ from .banco_dados import criar_conexao
 from .estrutura_registros import garantir_indices_registros
 from .jornada import garantir_estrutura_jornada
 from .estrutura_usuarios import garantir_estrutura_usuarios
+from .atestados import garantir_estrutura_atestados
 from .permissoes import exigir_tipos_conta, renderizar_pagina
 
 rota_planilha = Blueprint("planilha", __name__)
@@ -126,6 +127,24 @@ def buscar_jornadas(ids_usuarios=None):
         else:
             jornadas.setdefault(id_usuario, {})[dia] = (None, None, None, None, 0)
     return jornadas
+
+
+def buscar_atestados(inicio, fim, ids_usuarios):
+    garantir_estrutura_atestados()
+    if not ids_usuarios:
+        return {}
+    with criar_conexao() as conexao:
+        registros = conexao.execute(
+            """SELECT usuario_id, data_atestado, dia_inteiro, hora_inicio, hora_fim
+               FROM atestados
+               WHERE usuario_id = ANY(%s) AND data_atestado BETWEEN %s AND %s
+               ORDER BY data_atestado""",
+            (ids_usuarios, inicio, fim),
+        ).fetchall()
+    atestados = defaultdict(lambda: defaultdict(list))
+    for usuario_id, dia, dia_inteiro, hora_inicio, hora_fim in registros:
+        atestados[usuario_id][dia].append((dia_inteiro, hora_inicio, hora_fim))
+    return atestados
 
 
 DIAS_SEMANA = ("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")
@@ -264,6 +283,45 @@ def horas_previstas_jornada(jornada):
     )
 
 
+def minutos_abonados_na_jornada(jornada, atestados):
+    periodos = [
+        (inicio, fim)
+        for dia_inteiro, inicio, fim in atestados
+        if not dia_inteiro and inicio and fim
+    ]
+    if not periodos:
+        return 0
+
+    horarios = jornada["horarios"] if jornada else {}
+    if jornada and jornada["quantidade"] == 2:
+        intervalos_trabalho = [(horarios.get("Entrada"), horarios.get("Saída"))]
+    elif jornada and jornada["quantidade"] == 4:
+        intervalos_trabalho = [
+            (horarios.get("Entrada"), horarios.get("Intervalo")),
+            (horarios.get("Retorno intervalo"), horarios.get("Saída")),
+        ]
+    else:
+        return sum(
+            fim.hour * 60 + fim.minute - (inicio.hour * 60 + inicio.minute)
+            for inicio, fim in periodos
+        )
+
+    minutos_cobertos = 0
+    for inicio_trabalho, fim_trabalho in intervalos_trabalho:
+        if not inicio_trabalho or not fim_trabalho:
+            continue
+        inicio_trabalho = inicio_trabalho.hour * 60 + inicio_trabalho.minute
+        fim_trabalho = fim_trabalho.hour * 60 + fim_trabalho.minute
+        for inicio_atestado, fim_atestado in periodos:
+            inicio_atestado = inicio_atestado.hour * 60 + inicio_atestado.minute
+            fim_atestado = fim_atestado.hour * 60 + fim_atestado.minute
+            minutos_cobertos += max(
+                0,
+                min(fim_trabalho, fim_atestado) - max(inicio_trabalho, inicio_atestado),
+            )
+    return minutos_cobertos
+
+
 def horas_realizadas(batidas, quantidade):
     if quantidade == 2:
         return minutos_entre(batidas.get("Entrada"), batidas.get("Saída"))
@@ -286,7 +344,7 @@ def aplicar_estilo(celula, *, fundo=None, cor="243447", negrito=False,
 
 
 def configurar_folha(planilha, usuario, jornadas_estimadas, batidas_usuario,
-                     inicio_mes):
+                     atestados_usuario, inicio_mes):
     id_usuario, nome, _, ativo, rg, funcao, _, _ = usuario
     azul = "31425E"
     azul_claro = "EAF0F5"
@@ -369,6 +427,7 @@ def configurar_folha(planilha, usuario, jornadas_estimadas, batidas_usuario,
         dia = date(inicio_mes.year, inicio_mes.month, numero_dia)
         jornada = jornadas_estimadas.get(id_usuario, {}).get(dia.weekday())
         batidas_dia = batidas_usuario.get(dia, {})
+        atestados_dia = atestados_usuario.get(dia, [])
         planilha.cell(linha, 1, f"{DIAS_SEMANA[dia.weekday()]} · {dia:%d/%m/%Y}")
 
         for tipo, coluna in (("Entrada", 2), ("Intervalo", 3),
@@ -379,6 +438,12 @@ def configurar_folha(planilha, usuario, jornadas_estimadas, batidas_usuario,
                 planilha.cell(linha, coluna).number_format = "hh:mm"
 
         prevista = horas_previstas_jornada(jornada) if jornada else 0
+        abonacao_integral = any(atestado[0] for atestado in atestados_dia)
+        minutos_abonados = minutos_abonados_na_jornada(jornada, atestados_dia)
+        if abonacao_integral:
+            prevista = 0
+        elif prevista is not None and minutos_abonados:
+            prevista = max(0, prevista - minutos_abonados)
         conta_para_previsao = bool(jornada and prevista is not None and dia <= hoje)
         if conta_para_previsao:
             soma_previstas += prevista
@@ -399,10 +464,19 @@ def configurar_folha(planilha, usuario, jornadas_estimadas, batidas_usuario,
         if tem_batida:
             soma_realizadas += realizada
             totais_semanais[inicio_semana]["realizadas"] += realizada
+        if abonacao_integral:
+            ocorrencia = "Abonado"
+        elif tem_batida:
             esperados = ("Entrada", "Saída") if quantidade == 2 else (
                 ("Entrada", "Intervalo", "Retorno intervalo", "Saída") if quantidade == 4 else ()
             )
-            ocorrencia = "—" if esperados and all(tipo in batidas_dia for tipo in esperados) else "Incompleto"
+            registro_incompleto = not (esperados and all(tipo in batidas_dia for tipo in esperados))
+            if minutos_abonados:
+                ocorrencia = "Incompleto · abono" if registro_incompleto else "Abono parcial"
+            else:
+                ocorrencia = "Incompleto" if registro_incompleto else "—"
+        elif minutos_abonados and jornada:
+            ocorrencia = "Ausente parcial"
         elif jornada and dia <= hoje and ativo:
             ocorrencia = "Ausente"
         else:
@@ -411,8 +485,10 @@ def configurar_folha(planilha, usuario, jornadas_estimadas, batidas_usuario,
         planilha.cell(linha, 8, ocorrencia)
 
         cor_linha = "FFFFFF" if numero_dia % 2 else "F5F7F9"
-        if ocorrencia == "Ausente":
+        if ocorrencia.startswith("Ausente"):
             cor_linha = "FCEEEE"
+        elif ocorrencia.startswith("Abono") or ocorrencia == "Abonado":
+            cor_linha = "EAF4EC"
         elif ocorrencia == "Incompleto":
             cor_linha = "FFF6E5"
         for coluna in range(1, 9):
@@ -529,7 +605,7 @@ def configurar_folha(planilha, usuario, jornadas_estimadas, batidas_usuario,
     planilha.sheet_properties.pageSetUpPr.fitToPage = True
 
 
-def criar_planilha(registros, jornadas, usuarios, inicio):
+def criar_planilha(registros, jornadas, atestados, usuarios, inicio):
     workbook = Workbook()
     workbook.properties.creator = "Sistema de Ponto Eletrônico"
     workbook.properties.title = "Relatório mensal de frequência"
@@ -538,12 +614,18 @@ def criar_planilha(registros, jornadas, usuarios, inicio):
     titulos_existentes = {primeira.title}
     batidas = agrupar_batidas(registros)
     estimativas = estimar_jornadas(jornadas, batidas, usuarios, inicio)
-    configurar_folha(primeira, usuarios[0], estimativas, batidas.get(usuarios[0][0], {}), inicio)
+    configurar_folha(
+        primeira, usuarios[0], estimativas, batidas.get(usuarios[0][0], {}),
+        atestados.get(usuarios[0][0], {}), inicio,
+    )
 
     for usuario in usuarios[1:]:
         planilha = workbook.create_sheet(nome_aba_unico(usuario[1], titulos_existentes))
         titulos_existentes.add(planilha.title)
-        configurar_folha(planilha, usuario, estimativas, batidas.get(usuario[0], {}), inicio)
+        configurar_folha(
+            planilha, usuario, estimativas, batidas.get(usuario[0], {}),
+            atestados.get(usuario[0], {}), inicio,
+        )
 
     arquivo = BytesIO()
     workbook.save(arquivo)
@@ -672,7 +754,8 @@ def exibir_planilha():
                 inicio_estimativa = inicio - timedelta(weeks=SEMANAS_PARA_ESTIMATIVA)
                 registros = buscar_registros(inicio_estimativa, fim, ids_usuarios)
                 jornadas = buscar_jornadas(ids_usuarios)
-                arquivo = criar_planilha(registros, jornadas, selecionados, inicio)
+                atestados = buscar_atestados(inicio, fim, ids_usuarios)
+                arquivo = criar_planilha(registros, jornadas, atestados, selecionados, inicio)
                 nome_arquivo = f"frequencia_{inicio.year}_{inicio.month:02d}.xlsx"
                 return send_file(
                     arquivo,
