@@ -3,7 +3,7 @@ from io import BytesIO
 from threading import Lock
 from zoneinfo import ZoneInfo
 
-from flask import Blueprint, abort, redirect, request, send_file, session, url_for
+from flask import Blueprint, abort, make_response, redirect, request, send_file, session, url_for
 from werkzeug.utils import secure_filename
 
 from .banco_dados import criar_conexao
@@ -106,12 +106,14 @@ def destino(resultado):
 @exigir_tipos_conta("Suporte", "Administração")
 def exibir_atestados():
     garantir_estrutura_atestados()
-    resposta = renderizar_pagina(
-        "atestados.html",
-        "configuracoes",
-        usuarios_atestados=listar_usuarios(),
-        atestados=listar_atestados(),
-        resultado_atestado=request.args.get("resultado"),
+    resposta = make_response(
+        renderizar_pagina(
+            "atestados.html",
+            "configuracoes",
+            usuarios_atestados=listar_usuarios(),
+            atestados=listar_atestados(),
+            resultado_atestado=request.args.get("resultado"),
+        )
     )
     resposta.headers["Cache-Control"] = "private, no-store"
     return resposta
