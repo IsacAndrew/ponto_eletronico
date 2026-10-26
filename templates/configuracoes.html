@@ -3,9 +3,9 @@
 {% block titulo %}Configurações | Ponto Eletrônico{% endblock %}
 
 {% block estilos_pagina %}
-    <link rel="stylesheet" href="/static/css/configuracoes.css">
+    <link rel="stylesheet" href="{{ url_estatica('css/configuracoes.css') }}">
     {% if conta_suporte and not modo_visualizacao %}
-        <script src="/static/js/configuracoes.js" defer></script>
+        <script src="{{ url_estatica('js/configuracoes.js') }}" defer></script>
     {% endif %}
 {% endblock %}
 

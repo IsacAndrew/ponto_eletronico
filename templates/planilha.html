@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% block titulo %}Planilha | Ponto Eletrônico{% endblock %}
 {% block estilos_pagina %}
-<link rel="stylesheet" href="/static/css/planilha.css">
-<script src="/static/js/planilha.js" defer></script>
+<link rel="stylesheet" href="{{ url_estatica('css/planilha.css') }}">
+<script src="{{ url_estatica('js/planilha.js') }}" defer></script>
 {% endblock %}
 {% block conteudo %}
 <section class="cartao-pagina cartao-planilha">

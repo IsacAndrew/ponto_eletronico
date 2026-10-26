@@ -3,10 +3,10 @@
 {% block titulo %}Início | Ponto Eletrônico{% endblock %}
 
 {% block estilos_pagina %}
-    <link rel="stylesheet" href="/static/css/inicio.css">
-    <link rel="stylesheet" href="/static/css/ajuste_batidas.css">
-    <script src="/static/js/ajuste_batidas.js" defer></script>
-    <script src="/static/js/inicio.js" defer></script>
+    <link rel="stylesheet" href="{{ url_estatica('css/inicio.css') }}">
+    <link rel="stylesheet" href="{{ url_estatica('css/ajuste_batidas.css') }}">
+    <script src="{{ url_estatica('js/ajuste_batidas.js') }}" defer></script>
+    <script src="{{ url_estatica('js/inicio.js') }}" defer></script>
 {% endblock %}
 
 {% block conteudo %}

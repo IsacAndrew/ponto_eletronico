@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request, url_for
 
 from .banco_dados import criar_conexao
 from .inicio import rota_inicio
@@ -39,10 +39,41 @@ app.config.update(
 )
 
 
+def url_estatica(nome_arquivo):
+    """Gera URL de arquivo estático com versão baseada na última alteração."""
+    caminho = diretorio_projeto / "static" / nome_arquivo
+    try:
+        versao = caminho.stat().st_mtime_ns
+    except OSError:
+        return url_for("static", filename=nome_arquivo)
+
+    return url_for("static", filename=nome_arquivo, v=versao)
+
+
+@app.context_processor
+def disponibilizar_url_estatica():
+    return {"url_estatica": url_estatica}
+
+
 @app.after_request
 def adicionar_cabecalhos_seguranca(resposta):
     resposta.headers["X-Content-Type-Options"] = "nosniff"
     resposta.headers["Referrer-Policy"] = "strict-origin"
+
+    if request.endpoint == "static" and resposta.status_code == 200:
+        nome_arquivo = request.view_args.get("filename", "")
+        try:
+            versao_atual = str(
+                (diretorio_projeto / "static" / nome_arquivo).stat().st_mtime_ns
+            )
+        except OSError:
+            versao_atual = None
+
+        if request.args.get("v") == versao_atual:
+            resposta.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        else:
+            resposta.headers["Cache-Control"] = "public, max-age=3600"
+
     return resposta
 
 
