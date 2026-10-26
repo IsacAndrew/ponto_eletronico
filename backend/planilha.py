@@ -287,7 +287,7 @@ def aplicar_estilo(celula, *, fundo=None, cor="243447", negrito=False,
 
 def configurar_folha(planilha, usuario, jornadas_estimadas, batidas_usuario,
                      inicio_mes):
-    id_usuario, nome, tipo_conta, ativo, rg, funcao, _, _ = usuario
+    id_usuario, nome, _, ativo, rg, funcao, _, _ = usuario
     azul = "31425E"
     azul_claro = "EAF0F5"
     verde_claro = "E8F1EC"
@@ -295,12 +295,12 @@ def configurar_folha(planilha, usuario, jornadas_estimadas, batidas_usuario,
     linha_fina = Side(style="thin", color=cinza)
     borda = Border(left=linha_fina, right=linha_fina, top=linha_fina, bottom=linha_fina)
 
-    for intervalo in ("A1:H1", "A2:H2", "B4:E4", "G4:H4", "B5:E5", "G5:H5",
+    for intervalo in ("A1:H1", "A2:H2", "B4:E4", "G4:H4", "B5:H5",
                       "B6:H6", "A8:B8", "A9:B9", "C8:D8", "C9:D9", "E8:F8",
-                      "E9:F9", "G8:H8", "G9:H9", "A10:H10", "A44:H44",
+                      "E9:F9", "G8:H8", "G9:H9", "A44:H44",
                       "A45:C45", "D45:E45", "F45:G45",
-                      "A55:B55", "D55:E55", "G55:H55",
-                      "A56:B56", "D56:E56", "G56:H56"):
+                      "A54:B54", "D54:E54", "G54:H54",
+                      "A55:B55", "D55:E55", "G55:H55"):
         planilha.merge_cells(intervalo)
 
     planilha["A1"] = "RELATÓRIO MENSAL DE FREQUÊNCIA"
@@ -308,7 +308,6 @@ def configurar_folha(planilha, usuario, jornadas_estimadas, batidas_usuario,
     planilha["A4"], planilha["B4"] = "NOME COMPLETO", nome
     planilha["F4"], planilha["G4"] = "RG", rg or "Não informado"
     planilha["A5"], planilha["B5"] = "FUNÇÃO", funcao or "Não informada"
-    planilha["F5"], planilha["G5"] = "CATEGORIA", tipo_conta
     planilha["A6"] = "JORNADA SEMANAL ESTIMADA"
 
     dias_previstos = []
@@ -403,13 +402,11 @@ def configurar_folha(planilha, usuario, jornadas_estimadas, batidas_usuario,
             esperados = ("Entrada", "Saída") if quantidade == 2 else (
                 ("Entrada", "Intervalo", "Retorno intervalo", "Saída") if quantidade == 4 else ()
             )
-            ocorrencia = "Completo" if esperados and all(tipo in batidas_dia for tipo in esperados) else "Incompleto"
+            ocorrencia = "—" if esperados and all(tipo in batidas_dia for tipo in esperados) else "Incompleto"
         elif jornada and dia <= hoje and ativo:
             ocorrencia = "Ausente"
-        elif jornada:
-            ocorrencia = "Previsto"
         else:
-            ocorrencia = "Folga"
+            ocorrencia = "—"
         planilha.cell(linha, 7, timedelta(minutes=realizada) if tem_batida else "—")
         planilha.cell(linha, 8, ocorrencia)
 
@@ -429,8 +426,6 @@ def configurar_folha(planilha, usuario, jornadas_estimadas, batidas_usuario,
         "Parcial" if previsao_mensal_parcial
         else valor_duracao_excel(soma_realizadas - soma_previstas)
     )
-    if previsao_mensal_parcial:
-        planilha["C8"] = "HORAS PREVISTAS*"
     for celula in ("A9", "C9", "E9", "G9"):
         planilha[celula].number_format = '[h]:mm;[Red]-[h]:mm'
 
@@ -477,26 +472,20 @@ def configurar_folha(planilha, usuario, jornadas_estimadas, batidas_usuario,
         for coluna in (4, 6):
             planilha.cell(linha, coluna).number_format = "[h]:mm"
 
-    planilha["A53"] = (
-        "Batidas reais mantidas conforme registradas. Horários habituais usam a mediana de ao menos "
-        "3 registros nas 8 semanas anteriores, arredondada em 30 minutos; sem amostras suficientes, "
-        "usa-se a jornada cadastrada. *Parcial indica dias sem dados para estimar a carga prevista."
-    )
-    planilha.merge_cells("A53:H53")
-    planilha["A55"] = "Sandra Rio Tinto"
-    planilha["A56"] = "DIREÇÃO"
-    planilha["D55"] = "Beatriz Santo Silva"
-    planilha["D56"] = "COORDENAÇÃO"
-    planilha["G55"] = "Funcionário(a)"
-    planilha["G56"] = "ASSINATURA"
+    planilha["A54"] = "Sandra Rio Tinto"
+    planilha["A55"] = "DIREÇÃO"
+    planilha["D54"] = "Beatriz Santo Silva"
+    planilha["D55"] = "COORDENAÇÃO"
+    planilha["G54"] = "Funcionário(a)"
+    planilha["G55"] = "ASSINATURA"
 
     aplicar_estilo(planilha["A1"], fundo=azul, cor="FFFFFF", negrito=True, tamanho=15)
     aplicar_estilo(planilha["A2"], fundo=azul_claro, cor=azul, negrito=True, tamanho=10)
     for linha in (4, 5):
         aplicar_estilo(planilha.cell(linha, 1), fundo=azul_claro, cor=azul, negrito=True, tamanho=8, alinhamento="left")
-        aplicar_estilo(planilha.cell(linha, 6), fundo=azul_claro, cor=azul, negrito=True, tamanho=8, alinhamento="left")
+    aplicar_estilo(planilha["F4"], fundo=azul_claro, cor=azul, negrito=True, tamanho=8, alinhamento="left")
     aplicar_estilo(planilha["A6"], fundo=azul_claro, cor=azul, negrito=True, tamanho=8, alinhamento="left")
-    for intervalo in ("B4", "G4", "B5", "G5", "B6"):
+    for intervalo in ("B4", "G4", "B5", "B6"):
         aplicar_estilo(planilha[intervalo], fundo="FFFFFF", tamanho=8, alinhamento="left", borda=borda)
     for celula in ("A8", "C8", "E8", "G8"):
         aplicar_estilo(planilha[celula], fundo=azul, cor="FFFFFF", negrito=True, tamanho=7)
@@ -507,13 +496,12 @@ def configurar_folha(planilha, usuario, jornadas_estimadas, batidas_usuario,
     aplicar_estilo(planilha["A44"], fundo=azul, cor="FFFFFF", negrito=True, tamanho=8, alinhamento="left")
     for coluna in range(1, 9):
         aplicar_estilo(planilha.cell(45, coluna), fundo=azul_claro, cor=azul, negrito=True, tamanho=7, borda=borda)
-    aplicar_estilo(planilha["A53"], cor="65717D", tamanho=7, alinhamento="left")
-    for assinatura, cargo in (("A55", "A56"), ("D55", "D56"), ("G55", "G56")):
+    for assinatura, cargo in (("A54", "A55"), ("D54", "D55"), ("G54", "G55")):
         aplicar_estilo(planilha[assinatura], cor=azul, negrito=True, tamanho=8)
         aplicar_estilo(planilha[cargo], cor="65717D", negrito=True, tamanho=7)
     for colunas in ((1, 2), (4, 5), (7, 8)):
         for coluna in colunas:
-            planilha.cell(54, coluna).border = Border(
+            planilha.cell(53, coluna).border = Border(
                 bottom=Side(style="thin", color=azul)
             )
 
@@ -521,15 +509,14 @@ def configurar_folha(planilha, usuario, jornadas_estimadas, batidas_usuario,
     for indice, largura in enumerate(larguras, start=1):
         planilha.column_dimensions[chr(64 + indice)].width = largura
     alturas = {1: 30, 2: 20, 4: 21, 5: 21, 6: 36, 8: 22, 9: 30, 10: 8, 11: 24,
-               43: 7, 44: 18, 45: 18, 52: 6, 53: 20, 54: 18, 55: 20, 56: 16}
+               43: 7, 44: 18, 45: 18, 52: 6, 53: 18, 54: 20, 55: 16}
     for linha, altura in alturas.items():
         planilha.row_dimensions[linha].height = altura
     for linha in range(12, 43):
         planilha.row_dimensions[linha].height = 13
 
     planilha.sheet_view.showGridLines = False
-    planilha.freeze_panes = "A12"
-    planilha.print_area = "A1:H56"
+    planilha.print_area = "A1:H55"
     planilha.page_setup.orientation = "portrait"
     planilha.page_setup.paperSize = planilha.PAPERSIZE_A4
     planilha.page_setup.fitToWidth = 1
@@ -540,9 +527,6 @@ def configurar_folha(planilha, usuario, jornadas_estimadas, batidas_usuario,
     planilha.page_margins.top = 0.3
     planilha.page_margins.bottom = 0.3
     planilha.sheet_properties.pageSetUpPr.fitToPage = True
-    planilha.oddFooter.center.text = "Ponto Eletrônico · Relatório mensal de frequência"
-    planilha.oddFooter.center.size = 7
-    planilha.oddFooter.center.font = "Aptos,Regular"
 
 
 def criar_planilha(registros, jornadas, usuarios, inicio):
