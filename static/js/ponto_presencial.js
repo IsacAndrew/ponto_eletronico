@@ -63,6 +63,7 @@
                 ? "Ponto registrado com sucesso."
                 : resultado.mensagem;
             mensagem.dataset.estado = "sucesso";
+            botaoTentar.hidden = true;
         } catch (erro) {
             mostrarErro(erro.message);
         } finally {
@@ -81,5 +82,4 @@
     atualizarRelogio();
     window.setInterval(atualizarRelogio, 1000);
     botaoTentar.addEventListener("click", registrarPonto);
-    registrarPonto();
 })();
