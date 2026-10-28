@@ -30,7 +30,7 @@ def buscar_usuarios_exportacao():
     with criar_conexao() as conexao:
         return conexao.execute(
             """
-            SELECT id, nome_completo, tipo_conta, ativo, rg, funcao,
+            SELECT id, nome_completo, tipo_conta, ativo, cpf, funcao,
                    quantidade_batidas, dias_trabalho_semana
             FROM usuarios
             ORDER BY nome_completo
@@ -345,7 +345,7 @@ def aplicar_estilo(celula, *, fundo=None, cor="243447", negrito=False,
 
 def configurar_folha(planilha, usuario, jornadas_estimadas, batidas_usuario,
                      atestados_usuario, inicio_mes):
-    id_usuario, nome, _, ativo, rg, funcao, _, _ = usuario
+    id_usuario, nome, _, ativo, cpf, funcao, _, _ = usuario
     azul = "31425E"
     azul_claro = "EAF0F5"
     verde_claro = "E8F1EC"
@@ -364,7 +364,7 @@ def configurar_folha(planilha, usuario, jornadas_estimadas, batidas_usuario,
     planilha["A1"] = "RELATÓRIO MENSAL DE FREQUÊNCIA"
     planilha["A2"] = f"{MESES[inicio_mes.month - 1].upper()} DE {inicio_mes.year}"
     planilha["A4"], planilha["B4"] = "NOME COMPLETO", nome
-    planilha["F4"], planilha["G4"] = "RG", rg or "Não informado"
+    planilha["F4"], planilha["G4"] = "CPF", cpf or "Não informado"
     planilha["A5"], planilha["B5"] = "FUNÇÃO", funcao or "Não informada"
     planilha["A6"] = "JORNADA SEMANAL ESTIMADA"
 

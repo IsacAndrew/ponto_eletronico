@@ -6,7 +6,7 @@ from flask import Blueprint, g, jsonify, redirect, request, session, url_for
 from psycopg.errors import UniqueViolation
 
 from .banco_dados import criar_conexao
-from .formatacao import formatar_rg
+from .formatacao import formatar_cpf
 from .estrutura_registros import garantir_indices_registros
 from .estrutura_usuarios import garantir_estrutura_usuarios
 from .localizacao import garantir_tabela_marco_zero, obter_marco_zero
@@ -80,7 +80,7 @@ def exibir_configuracoes():
     configurado = False
     with criar_conexao() as conexao:
         perfil = conexao.execute(
-            "SELECT nome_completo, login, email, telefone, rg FROM usuarios WHERE id = %s",
+            "SELECT nome_completo, login, email, telefone, cpf FROM usuarios WHERE id = %s",
             (session["usuario_id"],),
         ).fetchone()
     if g.tipo_conta_real == "Suporte" and not g.modo_visualizacao:
@@ -109,9 +109,9 @@ def salvar_perfil():
     email = request.form.get("email", "").strip()
     telefone = request.form.get("telefone", "").strip()
     try:
-        rg = formatar_rg(request.form.get("rg", ""))
+        cpf = formatar_cpf(request.form.get("cpf", ""))
     except ValueError:
-        return redirect(url_for("configuracoes.exibir_configuracoes", perfil="rg_invalido"))
+        return redirect(url_for("configuracoes.exibir_configuracoes", perfil="cpf_invalido"))
     usuario_id = session["usuario_id"]
     if len(nome.split()) < 2 or len(nome) > 200:
         return redirect(url_for("configuracoes.exibir_configuracoes", perfil="nome_invalido"))
@@ -139,9 +139,9 @@ def salvar_perfil():
             if conflito:
                 return redirect(url_for("configuracoes.exibir_configuracoes", perfil="duplicado"))
             conexao.execute(
-                """UPDATE usuarios SET nome_completo = %s, login = %s, email = %s, telefone = %s, rg = %s
+                """UPDATE usuarios SET nome_completo = %s, login = %s, email = %s, telefone = %s, cpf = %s
                    WHERE id = %s""",
-                (nome, login, email, telefone, rg, usuario_id),
+                (nome, login, email, telefone, cpf, usuario_id),
             )
     except UniqueViolation:
         return redirect(url_for("configuracoes.exibir_configuracoes", perfil="duplicado"))

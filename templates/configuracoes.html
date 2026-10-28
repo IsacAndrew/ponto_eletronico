@@ -20,7 +20,7 @@
                 'login_invalido': 'Informe um login válido.',
                 'email_invalido': 'Informe um email válido.',
                 'telefone_invalido': 'Use o formato (xx) xxxxx-xxxx.',
-                'rg_invalido': 'Informe o RG com 9 dígitos.',
+                'cpf_invalido': 'Informe um CPF válido com 11 dígitos.',
                 'duplicado': 'Esse login ou email já está sendo usado por outra conta.'
             } %}
             {% if mensagem_perfil in mensagens_perfil %}<p class="mensagem-perfil">{{ mensagens_perfil[mensagem_perfil] }}</p>{% endif %}
@@ -29,7 +29,7 @@
                 <label>Login<input name="login" value="{{ perfil[1] }}" required maxlength="120" autocomplete="username"></label>
                 <label>Email<input name="email" type="email" value="{{ perfil[2] }}" required autocomplete="email"></label>
                 <label>Telefone<input name="telefone" value="{{ perfil[3] }}" required placeholder="(xx) xxxxx-xxxx" inputmode="tel" pattern="\(\d{2}\) \d{5}-\d{4}"></label>
-                <label>RG<input name="rg" value="{{ perfil[4] or '' }}" maxlength="12" inputmode="numeric" autocomplete="off" data-formatar-rg></label>
+                <label>CPF<input name="cpf" value="{{ perfil[4] or '' }}" maxlength="14" inputmode="numeric" autocomplete="off" data-formatar-cpf></label>
                 <button type="submit">Salvar dados</button>
             </form>
         </section>
@@ -132,5 +132,5 @@
 {% endblock %}
 
 {% block scripts_pagina %}
-    <script src="{{ url_for('static', filename='js/formatar_rg.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/formatar_cpf.js') }}" defer></script>
 {% endblock %}

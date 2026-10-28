@@ -7,7 +7,7 @@ from psycopg.errors import UniqueViolation
 from werkzeug.security import generate_password_hash
 
 from .banco_dados import criar_conexao
-from .formatacao import formatar_rg
+from .formatacao import formatar_cpf
 from .jornada import garantir_estrutura_jornada
 from .estrutura_usuarios import garantir_estrutura_usuarios
 from .ponto_qr import revogar_dispositivos_usuario
@@ -67,7 +67,7 @@ def buscar_usuario(usuario_id):
     with criar_conexao() as conexao:
         usuario = conexao.execute(
             """
-            SELECT id, nome_completo, login, email, telefone, rg, tipo_conta, funcao, ativo,
+            SELECT id, nome_completo, login, email, telefone, cpf, tipo_conta, funcao, ativo,
                    quantidade_batidas, dias_trabalho_semana, registro_fora_unidade
             FROM usuarios
             WHERE id = %s
@@ -81,7 +81,7 @@ def buscar_usuario(usuario_id):
     return dict(
         zip(
             (
-                "id", "nome_completo", "login", "email", "telefone", "rg", "tipo_conta", "funcao",
+                "id", "nome_completo", "login", "email", "telefone", "cpf", "tipo_conta", "funcao",
                 "ativo", "quantidade_batidas", "dias_trabalho_semana",
                 "registro_fora_unidade",
             ),
@@ -208,7 +208,7 @@ def validar_dados_usuario(formulario):
         "login": formulario.get("login", "").strip(),
         "email": formulario.get("email", "").strip() or None,
         "telefone": telefone or None,
-        "rg": formulario.get("rg", "").strip() or None,
+        "cpf": formulario.get("cpf", "").strip() or None,
         "funcao": formulario.get("funcao", "").strip() or None,
         "tipo_conta": formulario.get("tipo_conta", "") or "Professor",
     }
@@ -224,9 +224,9 @@ def validar_dados_usuario(formulario):
     if dados["funcao"] and len(dados["funcao"]) > 100:
         return dados, "A função deve ter no máximo 100 caracteres."
     try:
-        dados["rg"] = formatar_rg(dados["rg"])
+        dados["cpf"] = formatar_cpf(dados["cpf"])
     except ValueError:
-        return dados, "Informe o RG com 9 dígitos."
+        return dados, "Informe um CPF válido com 11 dígitos."
     if dados["tipo_conta"] not in TIPOS_CONTA:
         return dados, "Selecione uma permissão válida."
     return dados, None
@@ -283,7 +283,7 @@ def adicionar_usuario():
         "login": "",
         "email": "",
         "telefone": "",
-        "rg": "",
+        "cpf": "",
         "tipo_conta": "",
     }
 
@@ -321,7 +321,7 @@ def adicionar_usuario():
             conexao.execute(
                 """
                 INSERT INTO usuarios (
-                    nome_completo, login, email, telefone, rg, tipo_conta, senha_hash,
+                    nome_completo, login, email, telefone, cpf, tipo_conta, senha_hash,
                     ativo, deve_trocar_senha, quantidade_batidas, dias_trabalho_semana
                 )
                 VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE, TRUE, %s, 5)
@@ -331,7 +331,7 @@ def adicionar_usuario():
                     dados["login"],
                     dados["email"],
                     dados["telefone"],
-                    dados["rg"],
+                    dados["cpf"],
                     dados["tipo_conta"],
                     generate_password_hash("102030"),
                     2 if dados["tipo_conta"] == "Professor" else 4,
@@ -429,7 +429,7 @@ def editar_usuario(usuario_id):
                         login = %s,
                         email = %s,
                         telefone = %s,
-                        rg = %s,
+                        cpf = %s,
                         tipo_conta = %s,
                         funcao = %s,
                         ativo = %s,
@@ -441,7 +441,7 @@ def editar_usuario(usuario_id):
                         dados["login"],
                         dados["email"],
                         dados["telefone"],
-                        dados["rg"],
+                        dados["cpf"],
                         dados["tipo_conta"],
                         dados["funcao"],
                         ativo,
