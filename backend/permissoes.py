@@ -20,12 +20,6 @@ MENU_ADMINISTRACAO = [
 MENU_PROFESSOR = [
     ("Início", "inicio.exibir_inicio", "inicio", "casa"),
     (
-        "Grade Curricular",
-        "grade_curricular.exibir_grade_curricular",
-        "grade_curricular",
-        "grade",
-    ),
-    (
         "Configurações",
         "configuracoes.exibir_configuracoes",
         "configuracoes",

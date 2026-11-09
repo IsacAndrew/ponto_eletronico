@@ -13,7 +13,6 @@ from .planilha import rota_planilha
 from .ponto_hoje import rota_ponto_hoje
 from .configuracoes import rota_configuracoes
 from .db import rota_db
-from .grade_curricular import rota_grade_curricular
 from .ponto_qr import rota_ponto_qr
 from .atestados import rota_atestados
 from .mensagens_login import rota_mensagens_login
@@ -102,7 +101,6 @@ app.register_blueprint(rota_planilha)
 app.register_blueprint(rota_ponto_hoje)
 app.register_blueprint(rota_configuracoes)
 app.register_blueprint(rota_db)
-app.register_blueprint(rota_grade_curricular)
 app.register_blueprint(rota_ponto_qr)
 app.register_blueprint(rota_atestados)
 app.register_blueprint(rota_mensagens_login)
