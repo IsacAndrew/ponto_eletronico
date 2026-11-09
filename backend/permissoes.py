@@ -26,12 +26,6 @@ MENU_PROFESSOR = [
         "grade",
     ),
     (
-        "Chat com suporte",
-        "chat_suporte.exibir_chat_suporte",
-        "chat_suporte",
-        "conversa",
-    ),
-    (
         "Configurações",
         "configuracoes.exibir_configuracoes",
         "configuracoes",
@@ -41,7 +35,6 @@ MENU_PROFESSOR = [
 
 MENU_SUPORTE = [
     *MENU_ADMINISTRACAO[:4],
-    ("Chats", "chat_suporte.exibir_chat_suporte", "chat_suporte", "conversa"),
     *MENU_ADMINISTRACAO[4:],
     ("DB", "db.exibir_db", "db", "banco"),
 ]

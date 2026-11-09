@@ -53,44 +53,6 @@
     font-size: 0.95rem;
 }
 
-.atalho-suporte {
-    position: fixed;
-    right: 28px;
-    bottom: 28px;
-    z-index: 5;
-    display: grid;
-    width: 60px;
-    height: 60px;
-    border: 1px solid rgb(255 255 255 / 70%);
-    border-radius: 50%;
-    background: linear-gradient(145deg, #496486, #263950);
-    box-shadow: 0 8px 22px rgb(31 48 69 / 28%), inset 0 1px rgb(255 255 255 / 30%);
-    color: #fff;
-    text-decoration: none;
-    animation: flutuar-suporte 3.6s ease-in-out infinite;
-    place-items: center;
-}
-
-.icone-ajuda {
-    width: 29px;
-    height: 29px;
-    fill: none;
-    stroke: currentColor;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke-width: 2.2;
-}
-
-.atalho-suporte:hover {
-    background: linear-gradient(145deg, #58779e, #314a68);
-    box-shadow: 0 11px 26px rgb(31 48 69 / 34%), inset 0 1px rgb(255 255 255 / 34%);
-}
-
-.atalho-suporte:focus-visible {
-    outline: 3px solid #263950;
-    outline-offset: 5px;
-}
-
 @media (max-width: 640px) {
     .area-conteudo:has(.cartao-ponto) {
         align-content: center;
@@ -109,25 +71,5 @@
         border: 1px solid rgb(255 255 255 / 80%);
         border-radius: 20px;
         box-shadow: 0 22px 60px rgb(27 42 58 / 14%), inset 0 1px white;
-    }
-}
-
-@keyframes flutuar-suporte {
-    0%, 100% {
-        transform: translateY(0) scale(1);
-        box-shadow: 0 8px 22px rgb(31 48 69 / 25%), inset 0 1px rgb(255 255 255 / 30%);
-    }
-    50% {
-        transform: translateY(-8px) scale(1.035);
-        box-shadow: 0 15px 28px rgb(31 48 69 / 31%), inset 0 1px rgb(255 255 255 / 34%);
-    }
-}
-
-@media (max-width: 640px) {
-    .atalho-suporte {
-        right: 20px;
-        bottom: 20px;
-        width: 56px;
-        height: 56px;
     }
 }

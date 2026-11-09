@@ -8,7 +8,6 @@ Este sistema foi criado para atender a uma necessidade real do meu trabalho: org
 - Contas com diferentes perfis de acesso para suporte, administração, professores e colaboradores.
 - Gestão de usuários, jornadas de trabalho e registros de ponto.
 - Consulta dos registros do dia e geração de planilhas de frequência.
-- Chat de suporte para comunicação entre usuários e equipe responsável.
 - Páginas de configurações e acompanhamento do banco de dados.
 
 ## Minha atuação e uso de IA

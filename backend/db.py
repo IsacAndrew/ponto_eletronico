@@ -14,8 +14,6 @@ TABELAS_DADOS_SISTEMA = (
     "mensagens_login_exibicoes",
     "mensagens_login_destinatarios",
     "mensagens_login",
-    "mensagens_suporte",
-    "conversas_suporte",
     "dispositivos_ponto",
     "usuarios",
     "registros_ponto",

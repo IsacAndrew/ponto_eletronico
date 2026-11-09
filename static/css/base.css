@@ -641,11 +641,6 @@ body {
     .cartao-usuarios .tabela-usuarios-conteiner {
         overflow: visible;
     }
-
-    .atalho-suporte {
-        right: 18px;
-        bottom: max(18px, env(safe-area-inset-bottom));
-    }
 }
 
 @media (max-width: 360px) {
