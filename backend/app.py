@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-from datetime import timedelta
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request, url_for
@@ -35,7 +34,6 @@ app.config.update(
     SECRET_KEY=chave_secreta,
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    PERMANENT_SESSION_LIFETIME=timedelta(days=7),
     SESSION_COOKIE_SECURE=os.getenv("SESSION_COOKIE_SECURE", "false").lower()
     == "true",
 )

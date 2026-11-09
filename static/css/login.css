@@ -173,23 +173,6 @@ input {
     text-decoration: underline;
 }
 
-.opcao-manter-conectado {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    margin-top: -10px;
-    color: #40516a;
-    font-size: 0.88rem;
-    cursor: pointer;
-}
-
-.opcao-manter-conectado input {
-    width: 17px;
-    height: 17px;
-    margin: 0;
-    accent-color: var(--azul-medio);
-}
-
 .botao-entrar {
     min-height: 47px;
     margin-top: 2px;

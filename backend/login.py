@@ -174,7 +174,6 @@ def exibir_login():
                     revogar_dispositivo(conexao, token_dispositivo)
 
             session.clear()
-            session.permanent = request.form.get("lembrar_conectado") == "on"
             session["usuario_id"] = usuario[0]
             session["usuario_nome"] = usuario[1]
             session["tipo_conta"] = usuario[3]
@@ -195,8 +194,5 @@ def exibir_login():
     if destino_qr:
         session["ponto_qr_destino"] = destino_qr
     return render_template(
-        "login.html",
-        mensagem_erro=mensagem_erro,
-        ponto_qr=destino_qr or "",
-        lembrar_conectado=request.form.get("lembrar_conectado") == "on",
+        "login.html", mensagem_erro=mensagem_erro, ponto_qr=destino_qr or ""
     )
