@@ -1,0 +1,30 @@
+.pagina-mensagens { max-width: 900px; }
+.pagina-mensagens > h1 { text-align: center; }
+.voltar-configuracoes { display: inline-block; margin-top: 16px; color: #405779; font-weight: 600; text-decoration: none; }
+.voltar-configuracoes:hover { text-decoration: underline; }
+.explicacao-mensagens { margin: 0 0 18px; color: #607087; line-height: 1.5; }
+.aviso-mensagens { padding: 11px 14px; border-radius: 8px; background: #eff8f1; color: #28603c; }
+.painel-mensagens, .lista-mensagens { margin: 18px 0; padding: clamp(16px, 3vw, 22px); border: 1px solid #dbe3ec; border-radius: 13px; background: linear-gradient(145deg, #fff, #f4f7fb); box-shadow: 0 12px 28px rgb(37 55 79 / 7%); }
+.painel-mensagens h2, .lista-mensagens h2 { margin: 0 0 16px; color: #26364b; font-size: 1.08rem; }
+.formulario-mensagem { display: grid; gap: 9px; }
+.formulario-mensagem > label, .dias-mensagem legend, .destinatarios-mensagem legend { color: #35465d; font-size: .9rem; font-weight: 650; }
+.formulario-mensagem textarea, .formulario-mensagem select { width: 100%; min-height: 42px; padding: 9px 11px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #243449; font: inherit; }
+.formulario-mensagem textarea { resize: vertical; }
+.formulario-mensagem small, .nota-regra-mensagem { margin: -4px 0 7px; color: #607087; font-size: .82rem; line-height: 1.45; }
+.destinatarios-mensagem { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 9px; max-height: 280px; overflow: auto; margin: 0; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; }
+.destinatarios-mensagem label { display: flex; align-items: flex-start; gap: 8px; color: #40516a; font-size: .88rem; line-height: 1.4; }
+.destinatarios-mensagem input, .lista-dias-mensagem input { flex: 0 0 auto; margin-top: 3px; }
+.dias-mensagem { margin: 4px 0; padding: 11px 13px; border: 1px solid #dbe3ec; border-radius: 8px; }
+.lista-dias-mensagem { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 9px; margin-top: 10px; }
+.lista-dias-mensagem label { display: flex; align-items: center; gap: 7px; color: #40516a; font-size: .88rem; }
+.acoes-mensagem, .acoes-item-mensagem { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin-top: 8px; }
+.botao-primario-mensagem, .botao-secundario-mensagem, .botao-perigo-mensagem { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; padding: 8px 13px; border: 0; border-radius: 8px; font: inherit; font-size: .86rem; font-weight: 650; text-decoration: none; cursor: pointer; }
+.botao-primario-mensagem { background: #31445c; color: #fff; }
+.botao-secundario-mensagem { background: #eaf0f5; color: #31445c; }
+.botao-perigo-mensagem { background: #fff0f0; color: #9d343b; }
+.item-mensagem { margin-top: 12px; padding: 14px; border: 1px solid #dbe3ec; border-radius: 9px; background: #fff; }
+.cabecalho-item-mensagem { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; color: #40516a; font-size: .86rem; }
+.texto-previa-mensagem { margin: 12px 0; color: #26364b; white-space: pre-wrap; overflow-wrap: anywhere; }
+.destinatarios-previa { margin: 5px 0; color: #607087; font-size: .82rem; line-height: 1.45; }
+.acoes-item-mensagem form { margin: 0; }
+.sem-mensagens { margin: 0; color: #607087; }

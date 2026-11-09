@@ -174,6 +174,7 @@ def exibir_login():
                     revogar_dispositivo(conexao, token_dispositivo)
 
             session.clear()
+            session.permanent = True
             session["usuario_id"] = usuario[0]
             session["usuario_nome"] = usuario[1]
             session["tipo_conta"] = usuario[3]

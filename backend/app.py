@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -16,6 +17,7 @@ from .grade_curricular import rota_grade_curricular
 from .chat_suporte import rota_chat_suporte
 from .ponto_qr import rota_ponto_qr
 from .atestados import rota_atestados
+from .mensagens_login import rota_mensagens_login
 
 diretorio_projeto = Path(__file__).resolve().parent.parent
 load_dotenv(diretorio_projeto / ".env")
@@ -34,6 +36,7 @@ app.config.update(
     SECRET_KEY=chave_secreta,
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
+    PERMANENT_SESSION_LIFETIME=timedelta(days=7),
     SESSION_COOKIE_SECURE=os.getenv("SESSION_COOKIE_SECURE", "false").lower()
     == "true",
 )
@@ -104,6 +107,7 @@ app.register_blueprint(rota_grade_curricular)
 app.register_blueprint(rota_chat_suporte)
 app.register_blueprint(rota_ponto_qr)
 app.register_blueprint(rota_atestados)
+app.register_blueprint(rota_mensagens_login)
 
 
 if __name__ == "__main__":

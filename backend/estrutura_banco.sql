@@ -130,6 +130,51 @@ CREATE TABLE IF NOT EXISTS atestados (
 CREATE INDEX IF NOT EXISTS atestados_usuario_data_idx
 ON atestados (usuario_id, data_atestado);
 
+CREATE TABLE IF NOT EXISTS mensagens_login (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    texto TEXT NOT NULL CHECK (char_length(texto) BETWEEN 1 AND 4000),
+    modo TEXT NOT NULL CHECK (modo IN ('unica', 'semanal')),
+    dias_semana SMALLINT[] NOT NULL DEFAULT ARRAY[]::SMALLINT[],
+    numero_acesso SMALLINT,
+    ativa BOOLEAN NOT NULL DEFAULT TRUE,
+    criada_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (
+        (modo = 'unica' AND numero_acesso IS NULL)
+        OR
+        (modo = 'semanal' AND numero_acesso BETWEEN 1 AND 3
+         AND cardinality(dias_semana) > 0)
+    )
+);
+
+CREATE TABLE IF NOT EXISTS mensagens_login_configuracao (
+    id SMALLINT PRIMARY KEY CHECK (id = 1),
+    habilitada BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+INSERT INTO mensagens_login_configuracao (id)
+VALUES (1)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS mensagens_login_destinatarios (
+    mensagem_id BIGINT NOT NULL REFERENCES mensagens_login(id) ON DELETE CASCADE,
+    usuario_id BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    PRIMARY KEY (mensagem_id, usuario_id)
+);
+
+CREATE TABLE IF NOT EXISTS mensagens_login_exibicoes (
+    mensagem_id BIGINT NOT NULL REFERENCES mensagens_login(id) ON DELETE CASCADE,
+    usuario_id BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    exibida_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (mensagem_id, usuario_id)
+);
+
+CREATE TABLE IF NOT EXISTS mensagens_login_acessos_diarios (
+    usuario_id BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    data_acesso DATE NOT NULL,
+    quantidade INTEGER NOT NULL CHECK (quantidade > 0),
+    PRIMARY KEY (usuario_id, data_acesso)
+);
+
 ALTER TABLE atestados ENABLE ROW LEVEL SECURITY;
 
 DO $$

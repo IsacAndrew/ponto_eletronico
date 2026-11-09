@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block titulo %}Mensagens | Configurações{% endblock %}
+
+{% block estilos_pagina %}
+    <link rel="stylesheet" href="{{ url_estatica('css/configuracoes.css') }}">
+    <link rel="stylesheet" href="{{ url_estatica('css/mensagens.css') }}">
+{% endblock %}
+
+{% block conteudo %}
+    <section class="cartao-pagina cartao-configuracoes pagina-mensagens">
+        <h1>Mensagens</h1>
+        <section class="cartao-geracao-qr" aria-labelledby="titulo-configuracoes-mensagens">
+            <div>
+                <h2 id="titulo-configuracoes-mensagens">Configurações de Mensagens</h2>
+                <p>Crie mensagens, escolha quem recebe e defina quando aparecem.</p>
+            </div>
+            <a class="botao-gerar-qr" href="{{ url_for('mensagens_login.configurar_mensagens') }}">Abrir configurações</a>
+        </section>
+        <section class="cartao-geracao-qr" aria-labelledby="titulo-exibicao-mensagens">
+            <div>
+                <h2 id="titulo-exibicao-mensagens">Exibição de mensagens</h2>
+                <p>{{ 'Ativada' if mensagens_habilitadas else 'Desativada' }} para todos os usuários.</p>
+            </div>
+            <form method="post" action="{{ url_for('mensagens_login.alternar_todas_mensagens') }}">
+                <button class="botao-gerar-qr" type="submit">{{ 'Desativar mensagens' if mensagens_habilitadas else 'Ativar mensagens' }}</button>
+            </form>
+        </section>
+        <a class="voltar-configuracoes" href="{{ url_for('configuracoes.exibir_configuracoes') }}">Voltar para Configurações</a>
+    </section>
+{% endblock %}

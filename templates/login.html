@@ -19,11 +19,11 @@
                 <p class="mensagem-erro" role="alert">{{ mensagem_erro }}</p>
             {% endif %}
 
-            <form class="formulario-login" action="" method="post" autocomplete="off">
+            <form class="formulario-login" action="" method="post" autocomplete="off" data-mensagens-url="{{ url_for('mensagens_login.consultar_mensagem_login') }}">
                 {% if ponto_qr %}<input type="hidden" name="ponto_qr" value="{{ ponto_qr }}">{% endif %}
                 <div class="campo-formulario">
                     <label for="login">Login</label>
-                    <input id="login" name="login" type="text" autocomplete="off" required>
+                    <input id="login" name="login" type="text" autocomplete="username" required autofocus>
                 </div>
 
                 <div class="campo-formulario">
