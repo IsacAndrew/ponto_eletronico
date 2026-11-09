@@ -55,6 +55,11 @@
                     <a href="/recuperar-senha">Esqueci minha senha</a>
                 </div>
 
+                <label class="opcao-manter-conectado" for="lembrar-conectado">
+                    <input id="lembrar-conectado" name="lembrar_conectado" type="checkbox" {% if lembrar_conectado %}checked{% endif %}>
+                    <span>Manter conectado por 7 dias</span>
+                </label>
+
                 <button class="botao-entrar" type="submit">Entrar</button>
             </form>
         </section>
