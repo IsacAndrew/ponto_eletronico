@@ -91,6 +91,27 @@
     outline-offset: 5px;
 }
 
+@media (max-width: 640px) {
+    .area-conteudo:has(.cartao-ponto) {
+        align-content: center;
+        align-items: center;
+    }
+
+    .area-conteudo:has(.cartao-ponto) .cartao-ponto {
+        width: min(calc(100vw - 32px), 420px);
+        height: auto;
+        min-height: 0;
+        aspect-ratio: 1;
+        align-self: center;
+        justify-self: center;
+        margin: 0;
+        padding: clamp(18px, 6vw, 28px);
+        border: 1px solid rgb(255 255 255 / 80%);
+        border-radius: 20px;
+        box-shadow: 0 22px 60px rgb(27 42 58 / 14%), inset 0 1px white;
+    }
+}
+
 @keyframes flutuar-suporte {
     0%, 100% {
         transform: translateY(0) scale(1);
