@@ -21,10 +21,11 @@
             {% endif %}
         </p>
         <button class="botao-registrar" id="botao-registrar" type="button">Registrar</button>
-        <ol class="dia" id="dia" aria-label="Batidas de hoje">
+        <ol class="dia" id="dia" data-quantidade="{{ quantidade_batidas }}" aria-label="Batidas de hoje">
             <li>Entrada<b>--:--</b></li><li>Intervalo<b>--:--</b></li>
             <li>Retorno<b>--:--</b></li><li>Saída<b>--:--</b></li>
         </ol>
+        <p class="dia-sem-jornada" id="dia-sem-jornada" hidden>Sem batidas previstas para hoje.</p>
     </section>
 
     {% include "ajuste_batidas.html" %}

@@ -24,7 +24,20 @@ def exibir_inicio():
     usuario_id = session["usuario_id"]
     hoje = datetime.now(FUSO_HORARIO).date()
 
+    garantir_estrutura_jornada()
     with criar_conexao() as conexao:
+        quantidade_batidas = conexao.execute(
+            """
+            SELECT COALESCE(quantidade_semana.quantidade_batidas,
+                            usuario.quantidade_batidas)
+            FROM usuarios AS usuario
+            LEFT JOIN quantidades_batidas_semanais AS quantidade_semana
+              ON quantidade_semana.usuario_id = usuario.id
+             AND quantidade_semana.dia_semana = %s
+            WHERE usuario.id = %s AND usuario.ativo = TRUE
+            """,
+            (hoje.weekday(), usuario_id),
+        ).fetchone()[0]
         ultimo_registro = conexao.execute(
             """
             SELECT tipo_batida, registrado_em
@@ -44,7 +57,8 @@ def exibir_inicio():
         }
 
     return renderizar_pagina(
-        "inicio.html", "inicio", ultimo_registro=dados_ultimo_registro
+        "inicio.html", "inicio", ultimo_registro=dados_ultimo_registro,
+        quantidade_batidas=quantidade_batidas,
     )
 
 

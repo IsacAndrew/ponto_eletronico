@@ -79,6 +79,7 @@ input,select{font:inherit;width:100%;padding:12px;min-height:48px;border:1px sol
 .dia li{border-top:4px solid var(--line);padding-top:8px;font-size:.8rem;color:var(--muted)}
 .dia li.feito{border-color:var(--brand);color:var(--ink)}
 .dia b{display:block;font-size:1.05rem;font-variant-numeric:tabular-nums}
+.dia-sem-jornada{margin-top:18px;color:var(--muted);text-align:center}
 
 /* ===== Histórico (ponto_hoje.html) ===== */
 .erro-filtro-ponto-hoje{color:var(--bad);font-weight:600;margin-bottom:12px}

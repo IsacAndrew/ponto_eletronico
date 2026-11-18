@@ -45,6 +45,11 @@ async function registrarPonto() {
         }
         ultimoRegistro.textContent = `Último registro: ${resultado.horario} / ${resultado.tipo_batida}`;
         if (resultado.confirmacao_quantidade) {
+            const dia = document.querySelector("#dia");
+            if (dia) {
+                dia.dataset.quantidade = "4";
+                dia.dispatchEvent(new Event("quantidadebatidasalterada"));
+            }
             window.alert("Ponto registrado com sucesso.");
         }
     } catch (erro) {
