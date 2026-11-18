@@ -17,9 +17,9 @@
         <section class="cartao-ponto-presencial" aria-labelledby="titulo-ponto-presencial">
             <h1 id="titulo-ponto-presencial">Olá, {{ nome_usuario.split()[0] }}</h1>
             <p class="relogio-presencial" data-relogio>--:--:--</p>
-            <p class="estado-ponto-presencial" data-mensagem role="status" aria-live="polite">Confira o horário e toque no botão para registrar seu ponto.</p>
+            <p class="estado-ponto-presencial" data-mensagem role="status" aria-live="polite"></p>
             <button type="button" class="botao-tentar-novamente" data-tentar>Registrar ponto</button>
-            <p class="nota-ponto-presencial">Registro presencial autorizado pelo QR-Code da escola.</p>
+            
         </section>
     </main>
     {% include "ajuste_batidas.html" %}
