@@ -281,7 +281,7 @@
             </section>
         </dialog>
     {% endif %}
-    <script src="{{ url_for('static', filename='js/usuarios.js') }}" defer></script>
-    <script src="{{ url_for('static', filename='js/formatar_cpf.js') }}" defer></script>
-    {% if usuario_edicao and aba_edicao == 'jornada' %}<script src="{{ url_for('static', filename='js/jornada_usuario.js') }}" defer></script>{% endif %}
+    <script src="{{ url_estatica('js/usuarios.js') }}" defer></script>
+    <script src="{{ url_estatica('js/formatar_cpf.js') }}" defer></script>
+    {% if usuario_edicao and aba_edicao == 'jornada' %}<script src="{{ url_estatica('js/jornada_usuario.js') }}" defer></script>{% endif %}
 {% endblock %}

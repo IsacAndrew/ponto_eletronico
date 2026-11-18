@@ -3,7 +3,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify, request, url_for
+from flask import Flask, jsonify, request, send_from_directory, url_for
 
 from .banco_dados import criar_conexao
 from .inicio import rota_inicio
@@ -18,6 +18,7 @@ from .atestados import rota_atestados
 from .mensagens_login import rota_mensagens_login
 
 diretorio_projeto = Path(__file__).resolve().parent.parent
+diretorio_scripts = diretorio_projeto / "scripts"
 load_dotenv(diretorio_projeto / ".env")
 
 chave_secreta = os.getenv("FLASK_SECRET_KEY")
@@ -41,14 +42,27 @@ app.config.update(
 
 
 def url_estatica(nome_arquivo):
-    """Gera URL de arquivo estático com versão baseada na última alteração."""
-    caminho = diretorio_projeto / "static" / nome_arquivo
+    """Gera URL de CSS ou JavaScript com versão baseada na última alteração."""
+    if nome_arquivo.startswith("js/"):
+        nome_url = nome_arquivo[3:]
+        caminho = diretorio_scripts / nome_url
+        endpoint = "scripts"
+    else:
+        nome_url = nome_arquivo
+        caminho = diretorio_projeto / "static" / nome_url
+        endpoint = "static"
+
     try:
         versao = caminho.stat().st_mtime_ns
     except OSError:
-        return url_for("static", filename=nome_arquivo)
+        return url_for(endpoint, filename=nome_url)
 
-    return url_for("static", filename=nome_arquivo, v=versao)
+    return url_for(endpoint, filename=nome_url, v=versao)
+
+
+@app.get("/scripts/<path:filename>", endpoint="scripts")
+def servir_script(filename):
+    return send_from_directory(diretorio_scripts, filename)
 
 
 @app.context_processor
@@ -61,11 +75,15 @@ def adicionar_cabecalhos_seguranca(resposta):
     resposta.headers["X-Content-Type-Options"] = "nosniff"
     resposta.headers["Referrer-Policy"] = "strict-origin"
 
-    if request.endpoint == "static" and resposta.status_code == 200:
+    if request.endpoint in {"static", "scripts"} and resposta.status_code == 200:
         nome_arquivo = request.view_args.get("filename", "")
+        diretorio_arquivo = (
+            diretorio_scripts if request.endpoint == "scripts"
+            else diretorio_projeto / "static"
+        )
         try:
             versao_atual = str(
-                (diretorio_projeto / "static" / nome_arquivo).stat().st_mtime_ns
+                (diretorio_arquivo / nome_arquivo).stat().st_mtime_ns
             )
         except OSError:
             versao_atual = None
