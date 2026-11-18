@@ -1,17 +1,17 @@
 {% extends "base.html" %}
 
-{% block titulo %}Início | Ponto Eletrônico{% endblock %}
+{% block titulo %}Início | Ponto Batista{% endblock %}
 
 {% block estilos_pagina %}
-    <link rel="stylesheet" href="{{ url_estatica('css/inicio.css') }}">
     <link rel="stylesheet" href="{{ url_estatica('css/ajuste_batidas.css') }}">
     <script src="{{ url_estatica('js/ajuste_batidas.js') }}" defer></script>
     <script src="{{ url_estatica('js/inicio.js') }}" defer></script>
+    <script src="{{ url_estatica('js/dia.js') }}" defer></script>
 {% endblock %}
 
 {% block conteudo %}
-    <section class="cartao-pagina cartao-ponto">
-        <h1>Ponto eletrônico</h1>
+    <h1 class="titulo-pagina">Olá, {{ usuario_nome }}</h1>
+    <section class="card cartao-ponto">
         <p class="relogio-digital" id="relogio-digital" aria-label="Horário atual">--:--:--</p>
         <p class="ultimo-registro" id="ultimo-registro" role="status" aria-live="polite">
             {% if ultimo_registro %}
@@ -21,8 +21,11 @@
             {% endif %}
         </p>
         <button class="botao-registrar" id="botao-registrar" type="button">Registrar</button>
+        <ol class="dia" id="dia" aria-label="Batidas de hoje">
+            <li>Entrada<b>--:--</b></li><li>Intervalo<b>--:--</b></li>
+            <li>Retorno<b>--:--</b></li><li>Saída<b>--:--</b></li>
+        </ol>
     </section>
 
     {% include "ajuste_batidas.html" %}
-
 {% endblock %}

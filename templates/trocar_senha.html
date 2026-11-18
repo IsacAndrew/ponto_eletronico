@@ -2,15 +2,16 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crie sua senha | Ponto Eletrônico</title>
-    <link rel="stylesheet" href="{{ url_estatica('css/trocar_senha.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Crie sua senha | Ponto Batista</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_estatica('css/base.css') }}">
     <script src="{{ url_estatica('js/trocar_senha.js') }}" defer></script>
 </head>
 <body>
     <main class="pagina-senha">
         <section class="cartao-senha">
-            <span class="marcador-senha" aria-hidden="true">PB</span>
             <p class="sobretitulo-senha">Ponto Batista</p>
             <h1>Crie sua senha</h1>
             <p class="instrucao-senha">Antes de continuar, escolha uma senha pessoal para sua conta.</p>
@@ -21,16 +22,14 @@
 
             <form method="post" class="formulario-senha">
                 <label for="senha-nova">Nova senha</label>
-                <input id="senha-nova" name="senha_nova" type="password" minlength="6"
-                       autocomplete="new-password" required autofocus>
+                <input id="senha-nova" name="senha_nova" type="password" minlength="6" autocomplete="new-password" required autofocus>
 
                 <p id="aviso-senha" class="aviso-senha" hidden>
                     Guarde essa senha pois é com ela que você acessará o ponto.
                 </p>
 
                 <label for="confirmacao-senha">Confirme a nova senha</label>
-                <input id="confirmacao-senha" name="confirmacao_senha" type="password"
-                       minlength="6" autocomplete="new-password" required>
+                <input id="confirmacao-senha" name="confirmacao_senha" type="password" minlength="6" autocomplete="new-password" required>
 
                 <button type="submit">Salvar nova senha</button>
             </form>
