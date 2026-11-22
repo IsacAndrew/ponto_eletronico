@@ -34,13 +34,6 @@
             </form>
         </section>
         {% if conta_suporte and not modo_visualizacao %}
-            <section class="cartao-geracao-qr" aria-labelledby="titulo-mensagens">
-                <div>
-                    <h2 id="titulo-mensagens">Mensagens</h2>
-                    <p>Configure avisos que aparecem quando a pessoa digita o login na tela de entrada.</p>
-                </div>
-                <a class="botao-gerar-qr" href="{{ url_for('mensagens_login.exibir_mensagens') }}">Gerenciar mensagens</a>
-            </section>
 
             <section class="cartao-geracao-qr" aria-labelledby="titulo-atestados">
                 <div>

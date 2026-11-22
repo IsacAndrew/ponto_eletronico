@@ -9,11 +9,6 @@ from .permissoes import exigir_tipos_conta, renderizar_pagina
 rota_db = Blueprint("db", __name__)
 LIMITE_ARMAZENAMENTO_PADRAO = 500_000_000
 TABELAS_DADOS_SISTEMA = (
-    "mensagens_login_configuracao",
-    "mensagens_login_acessos_diarios",
-    "mensagens_login_exibicoes",
-    "mensagens_login_destinatarios",
-    "mensagens_login",
     "dispositivos_ponto",
     "usuarios",
     "registros_ponto",
