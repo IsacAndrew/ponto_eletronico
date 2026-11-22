@@ -105,47 +105,6 @@ CREATE TABLE IF NOT EXISTS registros_ponto_verificados (
     PRIMARY KEY (usuario_id, data_ponto)
 );
 
-CREATE TABLE IF NOT EXISTS atestados (
-    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    usuario_id BIGINT REFERENCES usuarios(id) ON DELETE SET NULL,
-    usuario_nome TEXT NOT NULL,
-    data_atestado DATE NOT NULL,
-    dia_inteiro BOOLEAN NOT NULL,
-    hora_inicio TIME,
-    hora_fim TIME,
-    anexo_nome TEXT NOT NULL,
-    anexo_mime TEXT NOT NULL,
-    anexo BYTEA NOT NULL,
-    enviado_por BIGINT REFERENCES usuarios(id) ON DELETE SET NULL,
-    enviado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CHECK (
-        (dia_inteiro AND hora_inicio IS NULL AND hora_fim IS NULL)
-        OR
-        (NOT dia_inteiro AND hora_inicio IS NOT NULL
-         AND hora_fim IS NOT NULL AND hora_fim > hora_inicio)
-    ),
-    CHECK (octet_length(anexo) BETWEEN 1 AND 5242880)
-);
-
-CREATE INDEX IF NOT EXISTS atestados_usuario_data_idx
-ON atestados (usuario_id, data_atestado);
-
-
-ALTER TABLE atestados ENABLE ROW LEVEL SECURITY;
-
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_policies
-        WHERE schemaname = 'public'
-          AND tablename = 'atestados'
-          AND policyname = 'atestados_bloqueio_api'
-    ) THEN
-        CREATE POLICY atestados_bloqueio_api ON atestados
-        USING (FALSE) WITH CHECK (FALSE);
-    END IF;
-END $$;
-
 ALTER TABLE jornadas_usuarios
 ALTER COLUMN intervalo DROP NOT NULL,
 ALTER COLUMN retorno_intervalo DROP NOT NULL;

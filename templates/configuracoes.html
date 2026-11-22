@@ -35,13 +35,6 @@
         </section>
         {% if conta_suporte and not modo_visualizacao %}
 
-            <section class="cartao-geracao-qr" aria-labelledby="titulo-atestados">
-                <div>
-                    <h2 id="titulo-atestados">Atestados</h2>
-                    <p>Anexe documentos e informe o dia ou período abonado do colaborador.</p>
-                </div>
-                <a class="botao-gerar-qr" href="{{ url_for('atestados.exibir_atestados') }}">Gerenciar atestados</a>
-            </section>
 
             <section class="cartao-geracao-qr" aria-labelledby="titulo-registros-ponto">
                 <div>
@@ -121,13 +114,6 @@
                 </section>
             </dialog>
         {% elif tipo_conta == 'Administração' %}
-            <section class="cartao-geracao-qr" aria-labelledby="titulo-atestados">
-                <div>
-                    <h2 id="titulo-atestados">Atestados</h2>
-                    <p>Anexe documentos e informe o dia ou período abonado do colaborador.</p>
-                </div>
-                <a class="botao-gerar-qr" href="{{ url_for('atestados.exibir_atestados') }}">Gerenciar atestados</a>
-            </section>
         {% endif %}
     </section>
 {% endblock %}

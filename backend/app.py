@@ -14,7 +14,6 @@ from .ponto_hoje import rota_ponto_hoje
 from .configuracoes import rota_configuracoes
 from .db import rota_db
 from .ponto_qr import rota_ponto_qr
-from .atestados import rota_atestados
 
 diretorio_projeto = Path(__file__).resolve().parent.parent
 diretorio_scripts = diretorio_projeto / "scripts"
@@ -119,7 +118,6 @@ app.register_blueprint(rota_ponto_hoje)
 app.register_blueprint(rota_configuracoes)
 app.register_blueprint(rota_db)
 app.register_blueprint(rota_ponto_qr)
-app.register_blueprint(rota_atestados)
 
 
 if __name__ == "__main__":

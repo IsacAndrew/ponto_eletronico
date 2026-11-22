@@ -12,7 +12,6 @@ TABELAS_DADOS_SISTEMA = (
     "dispositivos_ponto",
     "usuarios",
     "registros_ponto",
-    "atestados",
     "jornadas_usuarios",
     "configuracoes_sistema",
 )
