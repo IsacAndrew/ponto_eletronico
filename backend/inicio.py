@@ -15,7 +15,6 @@ from .estrutura_usuarios import garantir_estrutura_usuarios
 rota_inicio = Blueprint("inicio", __name__)
 FUSO_HORARIO = ZoneInfo("America/Sao_Paulo")
 TIPOS_BATIDA = ("Entrada", "Intervalo", "Retorno intervalo", "Saída")
-QUANTIDADES_VALIDAS = {0, 2, 4}
 
 
 @rota_inicio.route("/inicio")
@@ -99,16 +98,6 @@ def obter_quantidades_semanais(cursor, usuario_id, quantidade_padrao):
     for dia_semana, quantidade in cursor.fetchall():
         quantidades[dia_semana] = quantidade
     return quantidades
-
-
-def validar_quantidades_semanais(valores, dia_atual):
-    if not isinstance(valores, list) or len(valores) != 7:
-        return None
-    if any(type(quantidade) is not int or quantidade not in QUANTIDADES_VALIDAS for quantidade in valores):
-        return None
-    if valores[dia_atual] != 4:
-        return None
-    return valores
 
 
 def avisar_registro_incompleto(cursor, usuario_id, quantidades_semanais, hoje):
@@ -281,58 +270,10 @@ def _registrar_ponto(exigir_localizacao):
             if quantidade_batidas >= len(TIPOS_BATIDA):
                 return jsonify(
                     sucesso=False,
-                    mensagem="As 4 batidas de hoje já foram registradas.",
+                    mensagem=f"As {quantidade_prevista} batidas de hoje já foram registradas.",
                 ), 409
 
-            confirmou_quatro_batidas = dados_localizacao.get("quatro_batidas_hoje") is True
-            confirmar_quantidade = False
-            if confirmou_quatro_batidas:
-                novas_quantidades = validar_quantidades_semanais(
-                    dados_localizacao.get("quantidades_semanais"), agora.weekday()
-                )
-                if not novas_quantidades or quantidade_batidas < quantidade_prevista:
-                    return jsonify(sucesso=False, mensagem="Ajuste de batidas não solicitado."), 400
-
-                for dia_semana, quantidade in enumerate(novas_quantidades):
-                    cursor.execute(
-                        """INSERT INTO quantidades_batidas_semanais
-                           (usuario_id, dia_semana, quantidade_batidas)
-                           VALUES (%s, %s, %s)
-                           ON CONFLICT (usuario_id, dia_semana)
-                           DO UPDATE SET quantidade_batidas = EXCLUDED.quantidade_batidas""",
-                        (usuario_id, dia_semana, quantidade),
-                    )
-                quantidade_prevista = 4
-                quantidades_semanais[agora.weekday()] = 4
-                tipos_batida = TIPOS_BATIDA
-                cursor.execute(
-                    """SELECT id FROM registros_ponto
-                       WHERE usuario_id = %s AND data_ponto = %s
-                       ORDER BY registrado_em, id""",
-                    (usuario_id, agora.date()),
-                )
-                registros_hoje = cursor.fetchall()
-                for indice, (registro_id,) in enumerate(registros_hoje):
-                    cursor.execute(
-                        "UPDATE registros_ponto SET tipo_batida = %s WHERE id = %s",
-                        (tipos_batida[indice], registro_id),
-                    )
-                confirmar_quantidade = True
-
-            if quantidade_batidas >= quantidade_prevista and not confirmar_quantidade:
-                if (
-                    quantidade_prevista < 4
-                    and quantidade_batidas < 4
-                ):
-                    return jsonify(
-                        sucesso=False,
-                        perguntar_quantidade_batidas=True,
-                        mensagem="Hoje você possui 4 batidas?",
-                        quantidades_semanais=[
-                            4 if dia == agora.weekday() else quantidade
-                            for dia, quantidade in enumerate(quantidades_semanais)
-                        ],
-                    ), 409
+            if quantidade_batidas >= quantidade_prevista:
                 return jsonify(
                     sucesso=False,
                     mensagem=f"As {quantidade_prevista} batidas de hoje já foram registradas.",
@@ -366,6 +307,5 @@ def _registrar_ponto(exigir_localizacao):
         tipo_batida=tipo_batida,
         horario=agora.strftime("%H:%M:%S"),
         mensagem=f"{tipo_batida} registrada às {agora.strftime('%H:%M:%S')}.",
-        confirmacao_quantidade=confirmar_quantidade,
         aviso_registro_incompleto=aviso_registro_incompleto,
     )

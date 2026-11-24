@@ -17,24 +17,8 @@ async function registrarPonto() {
 
     try {
         const localizacao = await obterLocalizacao();
-        let resposta = await enviarRegistro(localizacao);
-        let resultado = await resposta.json();
-
-        if (resultado.perguntar_quantidade_batidas) {
-            const confirmou = window.confirm("Você possui 4 batidas de ponto no dia de hoje?");
-            if (!confirmou) {
-                window.alert("As 2 batidas de hoje já foram registradas. Se você acredita que há algo errado, fale com o suporte do sistema.");
-                return;
-            }
-            const quantidades = await window.abrirAjusteBatidas(resultado.quantidades_semanais);
-            if (!quantidades) return;
-            resposta = await enviarRegistro({
-                ...localizacao,
-                quatro_batidas_hoje: true,
-                quantidades_semanais: quantidades,
-            });
-            resultado = await resposta.json();
-        }
+        const resposta = await enviarRegistro(localizacao);
+        const resultado = await resposta.json();
 
         if (!resposta.ok) {
             throw new Error(resultado.mensagem || "Não foi possível registrar o ponto.");
@@ -44,14 +28,6 @@ async function registrarPonto() {
             window.alert(resultado.aviso_registro_incompleto);
         }
         ultimoRegistro.textContent = `Último registro: ${resultado.horario} / ${resultado.tipo_batida}`;
-        if (resultado.confirmacao_quantidade) {
-            const dia = document.querySelector("#dia");
-            if (dia) {
-                dia.dataset.quantidade = "4";
-                dia.dispatchEvent(new Event("quantidadebatidasalterada"));
-            }
-            window.alert("Ponto registrado com sucesso.");
-        }
     } catch (erro) {
         window.alert(mensagemErroPonto(erro));
     } finally {
