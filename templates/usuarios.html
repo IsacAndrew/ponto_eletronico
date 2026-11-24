@@ -120,7 +120,7 @@
                 </nav>
 
                 {% if aba_edicao == 'jornada' %}
-                    <p class="explicacao-jornada">Defina quantas batidas e dias de trabalho por semana, depois cadastre os horários de cada dia.</p>
+                    <p class="explicacao-jornada">Configure cada dia separadamente. Exemplo: segunda e quarta com 2 batidas; terça, quinta e sexta com 4. Cadastre os horários de cada dia de trabalho.</p>
                     {% if erro_jornada %}<p class="erro-edicao" role="alert">{{ erro_jornada }}</p>{% endif %}
                     <form class="formulario-edicao formulario-jornada" method="post" action="{{ url_for('usuarios.salvar_jornada', usuario_id=usuario_edicao.id, filtro=filtro_atual, busca=busca) }}">
                         <label for="quantidade-batidas">Batidas por dia</label>
@@ -246,7 +246,7 @@
                     <a class="fechar-edicao" href="{{ url_for('usuarios.exibir_usuarios', filtro=filtro_atual, busca=busca) }}" aria-label="Fechar cadastro">&times;</a>
                 </header>
 
-                <p class="aviso-senha-temporaria">A senha inicial será <strong>102030</strong>. O usuário deverá criar uma nova senha no primeiro acesso.</p>
+                <p class="aviso-senha-temporaria">Uma senha temporária aleatória será gerada e exibida após salvar. O usuário deverá trocá-la no primeiro acesso.</p>
                 {% if erro_novo %}<p class="erro-edicao" role="alert">{{ erro_novo }}</p>{% endif %}
 
                 <form class="formulario-edicao" method="post" action="{{ url_for('usuarios.adicionar_usuario', filtro=filtro_atual, busca=busca) }}">

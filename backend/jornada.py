@@ -66,6 +66,15 @@ def garantir_estrutura_jornada():
                 """
             )
             conexao.execute(
+                """INSERT INTO quantidades_batidas_semanais
+                   (usuario_id, dia_semana, quantidade_batidas)
+                   SELECT jornada.usuario_id, jornada.dia_semana,
+                          usuario.quantidade_batidas
+                   FROM jornadas_usuarios AS jornada
+                   JOIN usuarios AS usuario ON usuario.id = jornada.usuario_id
+                   ON CONFLICT (usuario_id, dia_semana) DO NOTHING"""
+            )
+            conexao.execute(
                 """
                 CREATE TABLE IF NOT EXISTS registros_ponto_verificados (
                     usuario_id BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,

@@ -1,4 +1,5 @@
 import re
+import secrets
 from datetime import time
 from threading import Lock
 
@@ -181,16 +182,27 @@ def renderizar_lista_usuarios(
 def exibir_usuarios():
     filtro = request.args.get("filtro", "nome")
     busca = request.args.get("busca", "").strip()
-    resultado = request.args.get("resultado")
+    resultado_chave = request.args.get("resultado")
+    senha_temporaria = session.pop("senha_temporaria", None)
     mensagens = {
-        "criado": "Usuário criado. A senha temporária é 102030 e deverá ser trocada no primeiro acesso.",
         "excluido": "Acesso excluído. Os registros de ponto foram preservados.",
-        "senha": "Senha redefinida para 102030. O usuário deverá criar uma nova senha no próximo acesso.",
     }
+    if resultado_chave == "criado":
+        mensagens["criado"] = (
+            f"Usuário criado. Senha temporária: {senha_temporaria}"
+            if senha_temporaria
+            else "Usuário criado. Gere uma nova senha temporária se necessário."
+        )
+    elif resultado_chave == "senha":
+        mensagens["senha"] = (
+            f"Senha temporária redefinida: {senha_temporaria}"
+            if senha_temporaria
+            else "A senha foi redefinida. Gere outra senha temporária se necessário."
+        )
     return renderizar_lista_usuarios(
         filtro,
         busca,
-        resultado=mensagens.get(resultado),
+        resultado=mensagens.get(resultado_chave),
     )
 
 
@@ -314,6 +326,7 @@ def adicionar_usuario():
             erro_novo="Já existe uma conta com a permissão Suporte.",
         )
 
+    senha_temporaria = secrets.token_urlsafe(12)
     garantir_campos_opcionais_usuario()
     garantir_estrutura_jornada()
     try:
@@ -333,7 +346,7 @@ def adicionar_usuario():
                     dados["telefone"],
                     dados["cpf"],
                     dados["tipo_conta"],
-                    generate_password_hash("102030"),
+                    generate_password_hash(senha_temporaria),
                     2 if dados["tipo_conta"] == "Professor" else 4,
                 ),
             )
@@ -345,6 +358,7 @@ def adicionar_usuario():
             erro_novo="Esse usuário já existe. Confira o login e o email informados.",
         )
 
+    session["senha_temporaria"] = senha_temporaria
     return redirect(
         url_for("usuarios.exibir_usuarios", filtro=filtro, busca=busca, resultado="criado")
     )
@@ -607,6 +621,7 @@ def excluir_jornada(usuario_id, dia):
 def redefinir_senha(usuario_id):
     filtro = request.values.get("filtro", "nome")
     busca = request.values.get("busca", "").strip()
+    senha_temporaria = secrets.token_urlsafe(12)
     with criar_conexao() as conexao:
         conexao.execute(
             """
@@ -614,10 +629,11 @@ def redefinir_senha(usuario_id):
             SET senha_hash = %s, deve_trocar_senha = TRUE
             WHERE id = %s
             """,
-            (generate_password_hash("102030"), usuario_id),
+            (generate_password_hash(senha_temporaria), usuario_id),
         )
         revogar_dispositivos_usuario(conexao, usuario_id)
 
+    session["senha_temporaria"] = senha_temporaria
     return redirect(
         url_for(
             "usuarios.exibir_usuarios",

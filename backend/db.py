@@ -14,6 +14,7 @@ TABELAS_DADOS_SISTEMA = (
     "registros_ponto",
     "jornadas_usuarios",
     "configuracoes_sistema",
+    "tentativas_login",
 )
 
 

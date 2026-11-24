@@ -1,3 +1,8 @@
+import hashlib
+import hmac
+from threading import Lock
+from datetime import timedelta
+
 from flask import (
     abort,
     Blueprint,
@@ -15,6 +20,121 @@ from .ponto_qr import NOME_COOKIE_DISPOSITIVO, revogar_dispositivo
 
 
 rota_login = Blueprint("login", __name__)
+MAX_TENTATIVAS_LOGIN = 5
+JANELA_TENTATIVAS_LOGIN = timedelta(minutes=5)
+MENSAGEM_LOGIN_BLOQUEADO = "Aguarde 5 minutos ou entre em contato com o Isac"
+_estrutura_tentativas_pronta = False
+_trava_estrutura_tentativas = Lock()
+
+
+def garantir_estrutura_tentativas_login():
+    global _estrutura_tentativas_pronta
+    if _estrutura_tentativas_pronta:
+        return
+    with _trava_estrutura_tentativas:
+        if _estrutura_tentativas_pronta:
+            return
+        with criar_conexao() as conexao:
+            conexao.execute(
+                """
+                CREATE TABLE IF NOT EXISTS tentativas_login (
+                    chave CHAR(64) PRIMARY KEY,
+                    tentativas SMALLINT NOT NULL
+                        CHECK (tentativas BETWEEN 1 AND 5),
+                    janela_iniciada TIMESTAMPTZ NOT NULL,
+                    bloqueada_ate TIMESTAMPTZ,
+                    atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+                """
+            )
+            conexao.execute(
+                """CREATE INDEX IF NOT EXISTS tentativas_login_atualizado_idx
+                   ON tentativas_login (atualizado_em)"""
+            )
+        _estrutura_tentativas_pronta = True
+
+
+def _chave_tentativas_login(login_usuario):
+    segredo = current_app.config["SECRET_KEY"]
+    if isinstance(segredo, str):
+        segredo = segredo.encode("utf-8")
+    identificador = login_usuario.strip().casefold().encode("utf-8")
+    return hmac.new(segredo, identificador, hashlib.sha256).hexdigest()
+
+
+def autenticar_com_limite(login_usuario, senha_usuario):
+    chave = _chave_tentativas_login(login_usuario)
+    id_bloqueio = int.from_bytes(bytes.fromhex(chave[:16]), "big", signed=True)
+
+    with criar_conexao() as conexao:
+        conexao.execute("SELECT pg_advisory_xact_lock(%s)", (id_bloqueio,))
+        estado = conexao.execute(
+            """SELECT tentativas, janela_iniciada, bloqueada_ate, NOW()
+               FROM tentativas_login WHERE chave = %s""",
+            (chave,),
+        ).fetchone()
+
+        if estado:
+            tentativas, inicio_janela, bloqueada_ate, agora = estado
+            if bloqueada_ate and bloqueada_ate > agora:
+                return None, True
+            if bloqueada_ate or inicio_janela <= agora - JANELA_TENTATIVAS_LOGIN:
+                conexao.execute(
+                    "DELETE FROM tentativas_login WHERE chave = %s", (chave,)
+                )
+
+        usuario = conexao.execute(
+            """
+            SELECT id, nome_completo, senha_hash, tipo_conta, deve_trocar_senha
+            FROM usuarios
+            WHERE login = %s AND ativo = TRUE
+            """,
+            (login_usuario,),
+        ).fetchone()
+
+        if usuario and check_password_hash(usuario[2], senha_usuario):
+            conexao.execute("DELETE FROM tentativas_login WHERE chave = %s", (chave,))
+            return usuario, False
+
+        tentativa = conexao.execute(
+            """
+            INSERT INTO tentativas_login
+                (chave, tentativas, janela_iniciada, bloqueada_ate, atualizado_em)
+            VALUES (%s, 1, NOW(), NULL, NOW())
+            ON CONFLICT (chave) DO UPDATE SET
+                tentativas = CASE
+                    WHEN tentativas_login.janela_iniciada
+                         <= NOW() - INTERVAL '5 minutes' THEN 1
+                    ELSE tentativas_login.tentativas + 1
+                END,
+                janela_iniciada = CASE
+                    WHEN tentativas_login.janela_iniciada
+                         <= NOW() - INTERVAL '5 minutes' THEN NOW()
+                    ELSE tentativas_login.janela_iniciada
+                END,
+                bloqueada_ate = CASE
+                    WHEN (
+                        CASE
+                            WHEN tentativas_login.janela_iniciada
+                                 <= NOW() - INTERVAL '5 minutes' THEN 1
+                            ELSE tentativas_login.tentativas + 1
+                        END
+                    ) >= 5 THEN NOW() + INTERVAL '5 minutes'
+                    ELSE NULL
+                END,
+                atualizado_em = NOW()
+            RETURNING tentativas, bloqueada_ate
+            """,
+            (chave,),
+        ).fetchone()
+
+        if tentativa[0] == 1:
+            conexao.execute(
+                """DELETE FROM tentativas_login
+                   WHERE atualizado_em < NOW() - INTERVAL '1 day'"""
+            )
+        bloqueado = tentativa[0] >= MAX_TENTATIVAS_LOGIN and tentativa[1] is not None
+        return None, bloqueado
 
 
 @rota_login.post("/visualizar-como")
@@ -132,15 +252,10 @@ def exibir_login():
         senha_usuario = request.form.get("senha", "")
 
         try:
-            with criar_conexao() as conexao:
-                usuario = conexao.execute(
-                    """
-                    SELECT id, nome_completo, senha_hash, tipo_conta, deve_trocar_senha
-                    FROM usuarios
-                    WHERE login = %s AND ativo = TRUE
-                    """,
-                    (login_usuario,),
-                ).fetchone()
+            garantir_estrutura_tentativas_login()
+            usuario, login_bloqueado = autenticar_com_limite(
+                login_usuario, senha_usuario
+            )
         except Exception:
             current_app.logger.exception("Não foi possível consultar o usuário.")
             return (
@@ -151,7 +266,7 @@ def exibir_login():
                 503,
             )
 
-        if usuario and check_password_hash(usuario[2], senha_usuario):
+        if usuario:
             try:
                 with criar_conexao() as conexao:
                     conexao.execute(
@@ -190,6 +305,10 @@ def exibir_login():
                 )
             return redirect(url_for("inicio.exibir_inicio"))
 
+        if login_bloqueado:
+            return render_template(
+                "login.html", mensagem_erro=MENSAGEM_LOGIN_BLOQUEADO
+            ), 429
         mensagem_erro = "Login ou senha incorreta"
 
     if destino_qr:
