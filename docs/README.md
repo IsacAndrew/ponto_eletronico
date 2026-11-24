@@ -31,4 +31,4 @@ Essa experiência me permite aprender como é acompanhar um sistema em uso, conv
 O sistema está em produção e segue em evolução a partir das necessidades observadas no uso real. A gestão, a organização das demandas e a condução das melhorias fazem parte do meu aprendizado em desenvolvimento e operação de software.
 
 ## Acesse o site
-iebb.onrender.com
+https://iebb.onrender.com/
