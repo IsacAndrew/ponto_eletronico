@@ -1,6 +1,5 @@
 import re
 import secrets
-from datetime import time
 from threading import Lock
 
 from flask import Blueprint, g, redirect, request, session, url_for
@@ -385,6 +384,7 @@ def editar_usuario(usuario_id):
                 "quantidade_batidas": usuario["quantidade_batidas"],
             },
         )
+        jornada_edicao["dias_selecionados"] = [dia] if dia in range(7) else []
         return renderizar_lista_usuarios(
             filtro,
             busca,
@@ -485,49 +485,24 @@ def salvar_jornada(usuario_id):
     if not usuario:
         return redirect(url_for("usuarios.exibir_usuarios", filtro=filtro, busca=busca))
 
+    dias_formulario = request.form.getlist("dias_semana")
     try:
-        dia = int(request.form.get("dia_semana", ""))
-    except ValueError:
-        dia = -1
+        dias_selecionados = [int(dia) for dia in dias_formulario]
+    except (TypeError, ValueError):
+        dias_selecionados = []
     try:
         quantidade_batidas = int(request.form.get("quantidade_batidas", usuario["quantidade_batidas"]))
-        dias_trabalho = int(request.form.get("dias_trabalho_semana", usuario["dias_trabalho_semana"]))
     except (TypeError, ValueError):
-        quantidade_batidas = dias_trabalho = 0
+        quantidade_batidas = 0
     valores = {
-        "dia_semana": dia,
+        "dias_selecionados": dias_selecionados,
         "quantidade_batidas": quantidade_batidas,
-        "entrada": request.form.get("entrada", ""),
-        "intervalo": request.form.get("intervalo", ""),
-        "retorno_intervalo": request.form.get("retorno_intervalo", ""),
-        "saida": request.form.get("saida", ""),
     }
-    campos_horario = (
-        ("entrada", "saida") if quantidade_batidas == 2
-        else ("entrada", "intervalo", "retorno_intervalo", "saida")
-    )
-    valores_horarios = [valores[campo].strip() for campo in campos_horario]
-    horarios_informados = any(valores_horarios)
-    horarios = []
-    erro_horario = None
-    if horarios_informados:
-        if not all(valores_horarios):
-            erro_horario = "Preencha todos os horários ou deixe todos em branco."
-        else:
-            try:
-                horarios = [time.fromisoformat(valor) for valor in valores_horarios]
-            except ValueError:
-                erro_horario = "Informe horários válidos."
-            if not erro_horario and not all(
-                horarios[indice] < horarios[indice + 1]
-                for indice in range(len(horarios) - 1)
-            ):
-                erro_horario = "Informe os horários em ordem."
     if (
-        dia not in range(7)
+        not dias_selecionados
+        or len(set(dias_selecionados)) != len(dias_selecionados)
+        or any(dia not in range(7) for dia in dias_selecionados)
         or quantidade_batidas not in {2, 4}
-        or dias_trabalho not in range(1, 8)
-        or erro_horario
     ):
         return renderizar_lista_usuarios(
             filtro,
@@ -536,61 +511,42 @@ def salvar_jornada(usuario_id):
             aba_edicao="jornada",
             jornadas=buscar_jornadas(usuario_id),
             jornada_edicao=valores,
-            erro_jornada=erro_horario or "Informe valores válidos para o dia.",
-        )
-
-    jornadas_existentes = buscar_jornadas(usuario_id)
-    dias_existentes = {jornada["dia_semana"] for jornada in jornadas_existentes}
-    quantidade_dias_configurados = len(dias_existentes) + (dia not in dias_existentes)
-    if quantidade_dias_configurados > dias_trabalho:
-        return renderizar_lista_usuarios(
-            filtro,
-            busca,
-            usuario_edicao=usuario,
-            aba_edicao="jornada",
-            jornadas=jornadas_existentes,
-            jornada_edicao=valores,
-            erro_jornada="Remova um dia cadastrado ou aumente os dias de trabalho por semana.",
+            erro_jornada="Selecione ao menos um dia da semana e uma quantidade válida de batidas.",
         )
 
     with criar_conexao() as conexao:
-        conexao.execute(
-            "UPDATE usuarios SET quantidade_batidas = %s, dias_trabalho_semana = %s WHERE id = %s",
-            (quantidade_batidas, dias_trabalho, usuario_id),
-        )
-        if horarios_informados:
+        tem_configuracao = conexao.execute(
+            "SELECT EXISTS(SELECT 1 FROM quantidades_batidas_semanais WHERE usuario_id = %s)",
+            (usuario_id,),
+        ).fetchone()[0]
+        if not tem_configuracao:
+            for dia in range(7):
+                conexao.execute(
+                    """INSERT INTO quantidades_batidas_semanais
+                       (usuario_id, dia_semana, quantidade_batidas) VALUES (%s, %s, 0)
+                       ON CONFLICT (usuario_id, dia_semana) DO NOTHING""",
+                    (usuario_id, dia),
+                )
+        for dia in dias_selecionados:
             conexao.execute(
-                """
-                INSERT INTO jornadas_usuarios
-                    (usuario_id, dia_semana, entrada, intervalo, retorno_intervalo, saida)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                ON CONFLICT (usuario_id, dia_semana) DO UPDATE SET
-                    entrada = EXCLUDED.entrada,
-                    intervalo = EXCLUDED.intervalo,
-                    retorno_intervalo = EXCLUDED.retorno_intervalo,
-                    saida = EXCLUDED.saida
-                """,
-                (
-                    usuario_id,
-                    dia,
-                    valores["entrada"],
-                    valores["intervalo"] if quantidade_batidas == 4 else None,
-                    valores["retorno_intervalo"] if quantidade_batidas == 4 else None,
-                    valores["saida"],
-                ),
+                """INSERT INTO quantidades_batidas_semanais
+                   (usuario_id, dia_semana, quantidade_batidas) VALUES (%s, %s, %s)
+                   ON CONFLICT (usuario_id, dia_semana)
+                   DO UPDATE SET quantidade_batidas = EXCLUDED.quantidade_batidas""",
+                (usuario_id, dia, quantidade_batidas),
             )
-        else:
             conexao.execute(
                 "DELETE FROM jornadas_usuarios WHERE usuario_id = %s AND dia_semana = %s",
                 (usuario_id, dia),
             )
+        dias_trabalho = conexao.execute(
+            """SELECT COUNT(*) FROM quantidades_batidas_semanais
+               WHERE usuario_id = %s AND quantidade_batidas > 0""",
+            (usuario_id,),
+        ).fetchone()[0]
         conexao.execute(
-            """INSERT INTO quantidades_batidas_semanais
-               (usuario_id, dia_semana, quantidade_batidas)
-               VALUES (%s, %s, %s)
-               ON CONFLICT (usuario_id, dia_semana)
-               DO UPDATE SET quantidade_batidas = EXCLUDED.quantidade_batidas""",
-            (usuario_id, dia, quantidade_batidas),
+            "UPDATE usuarios SET dias_trabalho_semana = %s WHERE id = %s",
+            (dias_trabalho, usuario_id),
         )
     return redirect(
         url_for(
@@ -599,7 +555,6 @@ def salvar_jornada(usuario_id):
             filtro=filtro,
             busca=busca,
             aba="jornada",
-            dia=dia,
         )
     )
 

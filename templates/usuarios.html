@@ -120,32 +120,19 @@
                 </nav>
 
                 {% if aba_edicao == 'jornada' %}
-                    <p class="explicacao-jornada">Configure cada dia separadamente. Exemplo: segunda e quarta com 2 batidas; terça, quinta e sexta com 4. Os horários são opcionais e podem ser cadastrados depois.</p>
                     {% if erro_jornada %}<p class="erro-edicao" role="alert">{{ erro_jornada }}</p>{% endif %}
                     <form class="formulario-edicao formulario-jornada" method="post" action="{{ url_for('usuarios.salvar_jornada', usuario_id=usuario_edicao.id, filtro=filtro_atual, busca=busca) }}">
-                        <label for="quantidade-batidas">Batidas por dia</label>
-                        <select id="quantidade-batidas" name="quantidade_batidas" required>
-                            <option value="2" {% if jornada_edicao.quantidade_batidas == 2 %}selected{% endif %}>2 batidas — Entrada e Saída</option>
-                            <option value="4" {% if jornada_edicao.quantidade_batidas != 2 %}selected{% endif %}>4 batidas — Entrada, Intervalo, Retorno e Saída</option>
-                        </select>
-                        <label for="dias-trabalho-semana">Dias de trabalho por semana</label>
-                        <select id="dias-trabalho-semana" name="dias_trabalho_semana" required>
-                            {% for quantidade in range(1, 8) %}<option value="{{ quantidade }}" {% if usuario_edicao.dias_trabalho_semana == quantidade %}selected{% endif %}>{{ quantidade }} dia{{ '' if quantidade == 1 else 's' }}</option>{% endfor %}
-                        </select>
-                        <label for="dia-jornada">Dia da semana</label>
-                        <select id="dia-jornada" name="dia_semana" required>
+                        <fieldset class="dias-semana-jornada">
+                            <legend>Dias da semana</legend>
                             {% for dia in dias_semana %}
-                                <option value="{{ loop.index0 }}" {% if jornada_edicao.dia_semana == loop.index0 %}selected{% endif %}>{{ dia }}</option>
+                                <label><input type="checkbox" name="dias_semana" value="{{ loop.index0 }}" {% if loop.index0 in jornada_edicao.dias_selecionados|default([]) %}checked{% endif %}> {{ dia }}</label>
                             {% endfor %}
+                        </fieldset>
+                        <label for="quantidade-batidas">Quantidade de batidas nos dias selecionados</label>
+                        <select id="quantidade-batidas" name="quantidade_batidas" required>
+                            <option value="2" {% if jornada_edicao.quantidade_batidas == 2 %}selected{% endif %}>2 — Entrada e Saída</option>
+                            <option value="4" {% if jornada_edicao.quantidade_batidas != 2 %}selected{% endif %}>4 — Entrada, Intervalo, Retorno do intervalo e Saída</option>
                         </select>
-                        <label for="hora-entrada">Entrada</label>
-                        <input id="hora-entrada" name="entrada" type="time" value="{{ jornada_edicao.entrada if jornada_edicao.entrada is string else jornada_edicao.entrada.strftime('%H:%M') if jornada_edicao.entrada else '' }}">
-                        <label class="campo-horario-quatro" for="hora-intervalo">Intervalo</label>
-                        <input class="campo-horario-quatro" id="hora-intervalo" name="intervalo" type="time" value="{{ jornada_edicao.intervalo if jornada_edicao.intervalo is string else jornada_edicao.intervalo.strftime('%H:%M') if jornada_edicao.intervalo else '' }}">
-                        <label class="campo-horario-quatro" for="hora-retorno">Retorno do intervalo</label>
-                        <input class="campo-horario-quatro" id="hora-retorno" name="retorno_intervalo" type="time" value="{{ jornada_edicao.retorno_intervalo if jornada_edicao.retorno_intervalo is string else jornada_edicao.retorno_intervalo.strftime('%H:%M') if jornada_edicao.retorno_intervalo else '' }}">
-                        <label for="hora-saida">Saída</label>
-                        <input id="hora-saida" name="saida" type="time" value="{{ jornada_edicao.saida if jornada_edicao.saida is string else jornada_edicao.saida.strftime('%H:%M') if jornada_edicao.saida else '' }}">
                         <footer class="acoes-edicao">
                             <a class="botao-cancelar" href="{{ url_for('usuarios.exibir_usuarios', filtro=filtro_atual, busca=busca) }}">Cancelar</a>
                             <button class="botao-salvar" type="submit">Salvar jornada</button>
@@ -154,19 +141,12 @@
 
                     <div class="lista-jornadas">
                         <h3>Dias cadastrados</h3>
-                        {% for jornada in jornadas %}
+                        {% for jornada in jornadas if jornada.quantidade_batidas in (2, 4) %}
                             <div class="linha-jornada">
                                 <a href="{{ url_for('usuarios.editar_usuario', usuario_id=usuario_edicao.id, filtro=filtro_atual, busca=busca, aba='jornada', dia=jornada.dia_semana) }}">
                                     <strong>{{ jornada.dia_nome }}</strong>
                                     <span>
-                                        {% if jornada.quantidade_batidas is not none %}{{ jornada.quantidade_batidas }} batidas{% if jornada.entrada %} · {% endif %}{% endif %}
-                                        {% if jornada.entrada %}
-                                            {% if jornada.quantidade_batidas == 2 %}
-                                                {{ jornada.entrada.strftime('%H:%M') }} · {{ jornada.saida.strftime('%H:%M') }}
-                                            {% else %}
-                                                {{ jornada.entrada.strftime('%H:%M') if jornada.entrada else '—' }} · {{ jornada.intervalo.strftime('%H:%M') if jornada.intervalo else '—' }} · {{ jornada.retorno_intervalo.strftime('%H:%M') if jornada.retorno_intervalo else '—' }} · {{ jornada.saida.strftime('%H:%M') if jornada.saida else '—' }}
-                                            {% endif %}
-                                        {% endif %}
+                                        {{ jornada.quantidade_batidas }} batidas
                                     </span>
                                 </a>
                                 <form method="post" action="{{ url_for('usuarios.excluir_jornada', usuario_id=usuario_edicao.id, dia=jornada.dia_semana, filtro=filtro_atual, busca=busca) }}">
@@ -283,5 +263,4 @@
     {% endif %}
     <script src="{{ url_estatica('js/usuarios.js') }}" defer></script>
     <script src="{{ url_estatica('js/formatar_cpf.js') }}" defer></script>
-    {% if usuario_edicao and aba_edicao == 'jornada' %}<script src="{{ url_estatica('js/jornada_usuario.js') }}" defer></script>{% endif %}
 {% endblock %}

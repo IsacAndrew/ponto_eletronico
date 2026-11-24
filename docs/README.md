@@ -7,6 +7,7 @@ Este sistema foi criado para atender a uma necessidade real do meu trabalho: org
 - Registro de ponto pela aplicação, incluindo opções por localização e QR Code.
 - Contas com diferentes perfis de acesso para suporte, administração, professores e colaboradores.
 - Gestão de usuários, jornadas de trabalho e registros de ponto.
+- Configuração de 2 ou 4 batidas em dias específicos da semana, sem exigir horários previstos.
 - Consulta dos registros do dia e geração de planilhas de frequência.
 - Páginas de configurações e acompanhamento do banco de dados.
 
