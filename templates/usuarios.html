@@ -120,7 +120,7 @@
                 </nav>
 
                 {% if aba_edicao == 'jornada' %}
-                    <p class="explicacao-jornada">Configure cada dia separadamente. Exemplo: segunda e quarta com 2 batidas; terça, quinta e sexta com 4. Cadastre os horários de cada dia de trabalho.</p>
+                    <p class="explicacao-jornada">Configure cada dia separadamente. Exemplo: segunda e quarta com 2 batidas; terça, quinta e sexta com 4. Os horários são opcionais e podem ser cadastrados depois.</p>
                     {% if erro_jornada %}<p class="erro-edicao" role="alert">{{ erro_jornada }}</p>{% endif %}
                     <form class="formulario-edicao formulario-jornada" method="post" action="{{ url_for('usuarios.salvar_jornada', usuario_id=usuario_edicao.id, filtro=filtro_atual, busca=busca) }}">
                         <label for="quantidade-batidas">Batidas por dia</label>
@@ -139,13 +139,13 @@
                             {% endfor %}
                         </select>
                         <label for="hora-entrada">Entrada</label>
-                        <input id="hora-entrada" name="entrada" type="time" value="{{ jornada_edicao.entrada if jornada_edicao.entrada is string else jornada_edicao.entrada.strftime('%H:%M') if jornada_edicao.entrada else '' }}" required>
+                        <input id="hora-entrada" name="entrada" type="time" value="{{ jornada_edicao.entrada if jornada_edicao.entrada is string else jornada_edicao.entrada.strftime('%H:%M') if jornada_edicao.entrada else '' }}">
                         <label class="campo-horario-quatro" for="hora-intervalo">Intervalo</label>
                         <input class="campo-horario-quatro" id="hora-intervalo" name="intervalo" type="time" value="{{ jornada_edicao.intervalo if jornada_edicao.intervalo is string else jornada_edicao.intervalo.strftime('%H:%M') if jornada_edicao.intervalo else '' }}">
                         <label class="campo-horario-quatro" for="hora-retorno">Retorno do intervalo</label>
                         <input class="campo-horario-quatro" id="hora-retorno" name="retorno_intervalo" type="time" value="{{ jornada_edicao.retorno_intervalo if jornada_edicao.retorno_intervalo is string else jornada_edicao.retorno_intervalo.strftime('%H:%M') if jornada_edicao.retorno_intervalo else '' }}">
                         <label for="hora-saida">Saída</label>
-                        <input id="hora-saida" name="saida" type="time" value="{{ jornada_edicao.saida if jornada_edicao.saida is string else jornada_edicao.saida.strftime('%H:%M') if jornada_edicao.saida else '' }}" required>
+                        <input id="hora-saida" name="saida" type="time" value="{{ jornada_edicao.saida if jornada_edicao.saida is string else jornada_edicao.saida.strftime('%H:%M') if jornada_edicao.saida else '' }}">
                         <footer class="acoes-edicao">
                             <a class="botao-cancelar" href="{{ url_for('usuarios.exibir_usuarios', filtro=filtro_atual, busca=busca) }}">Cancelar</a>
                             <button class="botao-salvar" type="submit">Salvar jornada</button>
