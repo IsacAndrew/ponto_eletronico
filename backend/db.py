@@ -1,7 +1,7 @@
 import os
 
 from flask import Blueprint, redirect, request, session, url_for
-from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.security import check_password_hash
 
 from .banco_dados import criar_conexao
 from .permissoes import exigir_tipos_conta, renderizar_pagina
@@ -15,8 +15,6 @@ TABELAS_DADOS_SISTEMA = (
     "jornadas_usuarios",
     "configuracoes_sistema",
 )
-LOGIN_SUPORTE_PADRAO = "isacandrewcs@gmail.com"
-SENHA_SUPORTE_PADRAO = "102030"
 
 
 def obter_limite_armazenamento():
@@ -59,10 +57,11 @@ def apagar_dados_sistema():
 
     with criar_conexao() as conexao:
         usuario = conexao.execute(
-            "SELECT senha_hash FROM usuarios WHERE id = %s AND ativo = TRUE",
+            """SELECT nome_completo, login, email, telefone, cpf, funcao, senha_hash
+               FROM usuarios WHERE id = %s AND ativo = TRUE""",
             (usuario_id,),
         ).fetchone()
-        if not usuario or not check_password_hash(usuario[0], senha):
+        if not usuario or not check_password_hash(usuario[6], senha):
             return redirect(url_for("db.exibir_db", erro="senha"))
 
         tabelas_existentes = []
@@ -83,17 +82,19 @@ def apagar_dados_sistema():
         conexao.execute(
             """
             INSERT INTO usuarios (
-                nome_completo, login, email, telefone, tipo_conta, senha_hash,
-                ativo, deve_trocar_senha
+                nome_completo, login, email, telefone, cpf, funcao,
+                tipo_conta, senha_hash, ativo, deve_trocar_senha
             )
-            VALUES (%s, %s, %s, %s, 'Suporte', %s, TRUE, TRUE)
+            VALUES (%s, %s, %s, %s, %s, %s, 'Suporte', %s, TRUE, FALSE)
             """,
             (
-                "Isac Andrew Oliveira Araujo",
-                LOGIN_SUPORTE_PADRAO,
-                LOGIN_SUPORTE_PADRAO,
-                "(11) 97783-4461",
-                generate_password_hash(SENHA_SUPORTE_PADRAO),
+                usuario[0],
+                usuario[1],
+                usuario[2],
+                usuario[3],
+                usuario[4],
+                usuario[5],
+                usuario[6],
             ),
         )
 

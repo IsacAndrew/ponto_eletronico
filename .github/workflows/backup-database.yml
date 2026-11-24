@@ -22,7 +22,6 @@ jobs:
       DB_USER: ${{ secrets.DB_USER }}
       DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
       BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
-      BACKUP_OUTPUT_DIR: ${{ runner.temp }}/backups
     steps:
       - name: Baixar o código
         uses: actions/checkout@v4
@@ -33,6 +32,8 @@ jobs:
           sudo apt-get install --yes postgresql-client gnupg
 
       - name: Gerar e criptografar o backup
+        env:
+          BACKUP_OUTPUT_DIR: ${{ runner.temp }}/backups
         run: python backend/backup_database.py
 
       - name: Guardar o backup por 90 dias

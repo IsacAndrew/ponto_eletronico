@@ -51,7 +51,7 @@ def trocar_senha():
 
     with criar_conexao() as conexao:
         usuario = conexao.execute(
-            "SELECT deve_trocar_senha FROM usuarios WHERE id = %s AND ativo = TRUE",
+            "SELECT deve_trocar_senha, senha_hash FROM usuarios WHERE id = %s AND ativo = TRUE",
             (usuario_id,),
         ).fetchone()
 
@@ -79,8 +79,8 @@ def trocar_senha():
 
         if len(senha_nova) < 6:
             mensagem_erro = "A nova senha deve ter pelo menos 6 caracteres."
-        elif senha_nova == "102030":
-            mensagem_erro = "Escolha uma senha diferente da senha temporária."
+        elif check_password_hash(usuario[1], senha_nova):
+            mensagem_erro = "Escolha uma senha diferente da senha atual."
         elif senha_nova != confirmacao_senha:
             mensagem_erro = "As senhas digitadas não conferem."
         else:

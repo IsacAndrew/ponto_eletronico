@@ -23,7 +23,7 @@ async function registrarPonto() {
         if (resultado.perguntar_quantidade_batidas) {
             const confirmou = window.confirm("Você possui 4 batidas de ponto no dia de hoje?");
             if (!confirmou) {
-                window.alert("As 2 batidas de hoje já foram registradas. Se você acredita que há algo errado, fale com o Isac.");
+                window.alert("As 2 batidas de hoje já foram registradas. Se você acredita que há algo errado, fale com o suporte do sistema.");
                 return;
             }
             const quantidades = await window.abrirAjusteBatidas(resultado.quantidades_semanais);

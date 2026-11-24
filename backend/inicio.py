@@ -269,7 +269,7 @@ def _registrar_ponto(exigir_localizacao):
             if quantidade_prevista == 0:
                 return jsonify(
                     sucesso=False,
-                    mensagem="Você não possui batidas de ponto configuradas para hoje. Fale com o Isac se precisar de ajuda.",
+                    mensagem="Você não possui batidas de ponto configuradas para hoje. Fale com o suporte do sistema se precisar de ajuda.",
                 ), 409
 
             if ultima_batida and agora - ultima_batida < timedelta(minutes=5):
