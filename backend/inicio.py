@@ -25,10 +25,11 @@ def exibir_inicio():
 
     garantir_estrutura_jornada()
     with criar_conexao() as conexao:
-        quantidade_batidas = conexao.execute(
+        dados_inicio = conexao.execute(
             """
             SELECT COALESCE(quantidade_semana.quantidade_batidas,
-                            usuario.quantidade_batidas)
+                            usuario.quantidade_batidas),
+                   usuario.registro_fora_unidade
             FROM usuarios AS usuario
             LEFT JOIN quantidades_batidas_semanais AS quantidade_semana
               ON quantidade_semana.usuario_id = usuario.id
@@ -36,7 +37,8 @@ def exibir_inicio():
             WHERE usuario.id = %s AND usuario.ativo = TRUE
             """,
             (hoje.weekday(), usuario_id),
-        ).fetchone()[0]
+        ).fetchone()
+        quantidade_batidas, registro_fora_unidade = dados_inicio
         ultimo_registro = conexao.execute(
             """
             SELECT tipo_batida, registrado_em
@@ -58,6 +60,7 @@ def exibir_inicio():
     return renderizar_pagina(
         "inicio.html", "inicio", ultimo_registro=dados_ultimo_registro,
         quantidade_batidas=quantidade_batidas,
+        registro_fora_unidade=registro_fora_unidade,
     )
 
 
@@ -157,31 +160,6 @@ def _registrar_ponto(exigir_localizacao):
     usuario_id = session["usuario_id"]
     agora = datetime.now(FUSO_HORARIO)
     dados_localizacao = request.get_json(silent=True) or {}
-    if exigir_localizacao:
-        try:
-            latitude = float(dados_localizacao.get("latitude"))
-            longitude = float(dados_localizacao.get("longitude"))
-            precisao = float(dados_localizacao.get("precisao"))
-        except (TypeError, ValueError):
-            current_app.logger.warning("PONTO_LOCALIZACAO_AUSENTE_OU_INVALIDA")
-            return jsonify(
-                sucesso=False,
-                mensagem="Não foi possível obter sua localização. Ative a localização do aparelho e tente novamente.",
-            ), 400
-
-        if (
-            not all(isfinite(valor) for valor in (latitude, longitude, precisao))
-            or not -90 <= latitude <= 90
-            or not -180 <= longitude <= 180
-            or precisao <= 0
-        ):
-            current_app.logger.warning("PONTO_COORDENADAS_OU_PRECISAO_INVALIDAS")
-            return jsonify(
-                sucesso=False,
-                mensagem="Não foi possível validar a localização. Confira as permissões e tente novamente.",
-            ), 400
-    else:
-        latitude = longitude = precisao = None
 
     garantir_estrutura_jornada()
     garantir_estrutura_registros()
@@ -203,11 +181,38 @@ def _registrar_ponto(exigir_localizacao):
                     ),
                     401,
                 )
+            exigir_localizacao_usuario = exigir_localizacao and not usuario[2]
+            if exigir_localizacao_usuario:
+                try:
+                    latitude = float(dados_localizacao.get("latitude"))
+                    longitude = float(dados_localizacao.get("longitude"))
+                    precisao = float(dados_localizacao.get("precisao"))
+                except (TypeError, ValueError):
+                    current_app.logger.warning("PONTO_LOCALIZACAO_AUSENTE_OU_INVALIDA")
+                    return jsonify(
+                        sucesso=False,
+                        mensagem="Não foi possível obter sua localização. Ative a localização do aparelho e tente novamente.",
+                    ), 400
+
+                if (
+                    not all(isfinite(valor) for valor in (latitude, longitude, precisao))
+                    or not -90 <= latitude <= 90
+                    or not -180 <= longitude <= 180
+                    or precisao <= 0
+                ):
+                    current_app.logger.warning("PONTO_COORDENADAS_OU_PRECISAO_INVALIDAS")
+                    return jsonify(
+                        sucesso=False,
+                        mensagem="Não foi possível validar a localização. Confira as permissões e tente novamente.",
+                    ), 400
+            else:
+                latitude = longitude = precisao = None
+
             quantidades_semanais = obter_quantidades_semanais(cursor, usuario_id, usuario[1])
             quantidade_prevista = quantidades_semanais[agora.weekday()]
             tipos_batida = ("Entrada", "Saída") if quantidade_prevista == 2 else TIPOS_BATIDA
 
-            if exigir_localizacao and not usuario[2]:
+            if exigir_localizacao_usuario:
                 marco_zero = obter_marco_zero(conexao)
                 latitude_marco, longitude_marco, _, raio_metros = marco_zero
                 if latitude_marco is None or longitude_marco is None:

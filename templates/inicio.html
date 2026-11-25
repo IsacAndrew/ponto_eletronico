@@ -18,7 +18,7 @@
                 Ainda sem registro para hoje.
             {% endif %}
         </p>
-        <button class="botao-registrar" id="botao-registrar" type="button">Registrar</button>
+        <button class="botao-registrar" id="botao-registrar" type="button" data-registro-fora-unidade="{{ 'true' if registro_fora_unidade else 'false' }}">Registrar</button>
         <ol class="dia" id="dia" data-quantidade="{{ quantidade_batidas }}" aria-label="Batidas de hoje">
             <li>Entrada<b>--:--</b></li><li>Intervalo<b>--:--</b></li>
             <li>Retorno<b>--:--</b></li><li>Saída<b>--:--</b></li>

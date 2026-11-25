@@ -16,7 +16,8 @@ async function registrarPonto() {
     botaoRegistrar.disabled = true;
 
     try {
-        const localizacao = await obterLocalizacao();
+        const podeRegistrarSemLocalizacao = botaoRegistrar.dataset.registroForaUnidade === "true";
+        const localizacao = podeRegistrarSemLocalizacao ? {} : await obterLocalizacao();
         const resposta = await enviarRegistro(localizacao);
         const resultado = await resposta.json();
 
