@@ -14,7 +14,7 @@ Flask (rotas, autenticação e regras de negócio)
 PostgreSQL
 ```
 
-O navegador cuida da apresentação e de interações como solicitar a localização do aparelho. As decisões que precisam ser confiáveis — autenticação, permissões, sequência das batidas e validação da localização — são feitas novamente no servidor. O banco persiste as contas, jornadas, registros e configurações.
+O navegador cuida da apresentação e de interações como solicitar a localização do aparelho. As decisões que precisam ser confiáveis autenticação, permissões, sequência das batidas e validação da localização são feitas novamente no servidor. O banco persiste as contas, jornadas, registros e configurações.
 
 ## Tecnologias
 
